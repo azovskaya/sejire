@@ -154,9 +154,12 @@ header{background:var(--navy);color:#fff;height:54px;padding:0 18px;display:flex
   <div class="logo">Sejire<span>Генеалогическое Древо</span></div>
   <div class="spacer"></div>
   <button class="btn" onclick="exportJSON()">Экспорт JSON</button>
-  <button class="btn" onclick="exportSVG()" title="Вектор: открыть в браузере или Illustrator">SVG</button>
-  <button class="btn" onclick="exportPNG()" title="Растр PNG">PNG</button>
-  <button class="btn" onclick="exportPDFPrint()" title="Откроется печать Safari → «Сохранить как PDF»">PDF</button>
+  <button class="btn" onclick="exportSVG('vertical')" title="Вектор: классическая вертикальная раскладка (A3)">SVG • Вертик</button>
+  <button class="btn" onclick="exportSVG('bowtie')" title="Вектор: bow-tie (отцовская влево, материнская вправо) (A3)">SVG • Bow-tie</button>
+  <button class="btn" onclick="exportPDFPrint('shezhire')" title="Шежире (жети ата) в традиционном стиле, A3">Шежире</button>
+  <button class="btn" onclick="exportPDFPrint('shezhire-tree')" title="Шежире-дерево: ствол и ветви, A3">Шежире • Дерево</button>
+  <button class="btn" onclick="exportPDFPrint('vertical')" title="Откроется печать Safari → «Сохранить как PDF» (A3 альбомный)">PDF • Вертик</button>
+  <button class="btn" onclick="exportPDFPrint('bowtie')" title="Откроется печать Safari → «Сохранить как PDF» (A3 альбомный)">PDF • Bow-tie</button>
   <button class="btn" onclick="triggerImport()">Импорт</button>
   <input id="importFile" type="file" accept="application/json" style="display:none" onchange="handleImportFile(event)">
   <button class="btn btn-primary" onclick="toggleForm()">Добавить</button>
@@ -326,6 +329,296 @@ function displayDate(raw){
     return d+'.'+m+'.'+y;
   }
   return String(raw).replace(/-/g,'.');
+}
+
+function getRootPerson(){
+  return state.persons.find(p => p.Role === 'Корень') || state.persons[0] || null;
+}
+
+function posterRootName(){
+  const root = getRootPerson();
+  return (root && root.FullName) ? root.FullName : 'Семейное древо';
+}
+
+const LINE_FATHER = '#2563EB';
+const LINE_MOTHER = '#E11D48';
+
+function fitTextChars(text, maxChars){
+  const s = String(text || '').trim();
+  const n = Math.max(1, maxChars|0);
+  if(s.length <= n) return s;
+  if(n <= 1) return '…';
+  return s.slice(0, n - 1) + '…';
+}
+
+function wrapTextLines(text, maxCharsPerLine, maxLines){
+  const s = String(text || '').trim().replace(/\s+/g, ' ');
+  if(!s) return [''];
+  const maxChars = Math.max(6, maxCharsPerLine|0);
+  const linesMax = Math.max(1, maxLines|0);
+
+  const words = s.split(' ');
+  const lines = [];
+  let cur = '';
+
+  for(const w of words){
+    const next = cur ? (cur + ' ' + w) : w;
+    if(next.length <= maxChars){
+      cur = next;
+      continue;
+    }
+    if(cur){
+      lines.push(cur);
+      cur = w;
+    }else{
+      // Single very long word
+      lines.push(w.slice(0, Math.max(1, maxChars - 1)) + '…');
+      cur = '';
+    }
+    if(lines.length >= linesMax) break;
+  }
+  if(lines.length < linesMax && cur) lines.push(cur);
+
+  // If we truncated words, ellipsize the last line
+  const usedWords = lines.join(' ').split(' ').filter(Boolean).length;
+  if(usedWords < words.length){
+    const i = lines.length - 1;
+    const base = lines[i] || '';
+    lines[i] = base.length >= maxChars ? (base.slice(0, Math.max(1, maxChars - 1)) + '…') : (base + '…');
+  }
+  // Ensure exact max lines
+  return lines.slice(0, linesMax);
+}
+
+function buildParentsIndex(persons){
+  const byId = {};
+  persons.forEach(p => byId[p.ID] = p);
+  const parentsOf = {};
+  persons.forEach(p => {
+    if (p.TargetID && byId[p.TargetID]) (parentsOf[p.TargetID] = parentsOf[p.TargetID] || []).push(p);
+  });
+  Object.keys(parentsOf).forEach(childID => {
+    parentsOf[childID].sort((a, b) => {
+      if (a.Sex === 'M' && b.Sex !== 'M') return -1;
+      if (a.Sex !== 'M' && b.Sex === 'M') return  1;
+      return 0;
+    });
+  });
+  return { byId, parentsOf };
+}
+
+function buildShezhirePaternalLine(persons, maxDepth){
+  const { byId, parentsOf } = buildParentsIndex(persons);
+  const root = getRootPerson();
+  if(!root) return [];
+  const out = [root];
+  let current = root;
+  const depth = Math.max(1, maxDepth || 7);
+  for(let i=1;i<depth;i++){
+    const plist = parentsOf[current.ID] || [];
+    if(!plist.length) break;
+    const father = plist.find(p => p.Sex === 'M') || plist[0];
+    if(!father || !byId[father.ID]) break;
+    out.push(father);
+    current = father;
+  }
+  return out;
+}
+
+function buildShezhireSVGString(){
+  if(!state.persons.length) throw new Error('Дерево пустое');
+  const line = buildShezhirePaternalLine(state.persons, 9);
+  if(!line.length) throw new Error('Нет данных для шежире');
+
+  const W = 1684; // A3 landscape at 72dpi-like logical units
+  const H = 1191;
+  const topPad = 170;
+  const bottomPad = 120;
+  const usableH = H - topPad - bottomPad;
+  const step = line.length > 1 ? usableH / (line.length - 1) : 0;
+
+  const bg = '#F9F1DD';
+  const paper = '#FDF7E8';
+  const border = '#B08942';
+  const ink = '#4A2F12';
+  const muted = '#6E5130';
+  const accent = '#8C5A1E';
+
+  const rootName = posterRootName();
+  const rootTitleLines = wrapTextLines(rootName, 44, 2);
+  const parts = [];
+  parts.push('<?xml version="1.0" encoding="UTF-8"?>');
+  parts.push('<svg xmlns="http://www.w3.org/2000/svg" width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'">');
+  parts.push('<rect width="100%" height="100%" fill="'+bg+'"/>');
+  parts.push('<rect x="36" y="36" width="'+(W-72)+'" height="'+(H-72)+'" rx="16" fill="'+paper+'" stroke="'+border+'" stroke-width="3"/>');
+  parts.push('<rect x="58" y="58" width="'+(W-116)+'" height="'+(H-116)+'" rx="12" fill="none" stroke="'+border+'" stroke-width="1.2" opacity="0.65"/>');
+
+  // Header
+  parts.push('<text x="'+(W/2)+'" y="96" text-anchor="middle" font-size="38" font-family="Georgia, Times New Roman, serif" font-weight="700" fill="'+ink+'">ШЕЖІРЕ</text>');
+  parts.push('<text x="'+(W/2)+'" y="132" text-anchor="middle" font-size="17" font-family="Georgia, Times New Roman, serif" fill="'+muted+'">Жеті ата (әке жағынан)</text>');
+  parts.push('<text x="'+(W/2)+'" y="156" text-anchor="middle" font-size="15" font-family="Georgia, Times New Roman, serif" fill="'+muted+'">');
+  parts.push('<tspan x="'+(W/2)+'" dy="0">'+esc(rootTitleLines[0] || '')+'</tspan>');
+  parts.push('<tspan x="'+(W/2)+'" dy="18">'+esc(rootTitleLines[1] || '')+'</tspan>');
+  parts.push('</text>');
+
+  const cx = W/2;
+  // Main trunk line
+  const yTop = topPad;
+  const yBottom = topPad + step * Math.max(0, line.length - 1);
+  parts.push('<line x1="'+cx+'" y1="'+yTop+'" x2="'+cx+'" y2="'+yBottom+'" stroke="'+accent+'" stroke-width="4" stroke-linecap="round" opacity="0.8"/>');
+
+  const generationLabels = ['Өзі', 'Әкесі', 'Атасы', 'Арғы атасы', 'Бабасы', 'Түп атасы', 'Жеті ата', '8-ата', '9-ата'];
+  line.forEach((p, i) => {
+    const y = topPad + i * step;
+    const label = generationLabels[i] || ((i+1)+'-ата');
+    const name = fitTextChars(p.FullName || '', 34);
+    const role = (p.Role === 'Корень') ? '' : (p.Role || '');
+
+    // left-right ornaments
+    parts.push('<path d="M '+(cx-220)+' '+(y)+' q 28 -20 56 0 q -28 20 -56 0" fill="none" stroke="'+border+'" stroke-width="1.2" opacity="0.65"/>');
+    parts.push('<path d="M '+(cx+220)+' '+(y)+' q -28 -20 -56 0 q 28 20 56 0" fill="none" stroke="'+border+'" stroke-width="1.2" opacity="0.65"/>');
+
+    parts.push('<circle cx="'+cx+'" cy="'+y+'" r="26" fill="#FFF7E6" stroke="'+accent+'" stroke-width="2.2"/>');
+    parts.push('<circle cx="'+cx+'" cy="'+y+'" r="14" fill="none" stroke="'+border+'" stroke-width="1.1" opacity="0.7"/>');
+
+    parts.push('<text x="'+(cx-300)+'" y="'+(y-6)+'" text-anchor="end" font-size="14" font-family="Arial, Helvetica, Noto Sans, sans-serif" fill="'+muted+'">'+esc(label)+'</text>');
+    parts.push('<text x="'+(cx+44)+'" y="'+(y-6)+'" font-size="21" font-family="Georgia, Times New Roman, serif" font-weight="700" fill="'+ink+'">'+esc(name)+'</text>');
+    if(role){
+      parts.push('<text x="'+(cx+44)+'" y="'+(y+16)+'" font-size="12" font-family="Arial, Helvetica, Noto Sans, sans-serif" fill="'+muted+'">'+esc(role)+'</text>');
+    }
+  });
+
+  parts.push('<text x="'+(W/2)+'" y="'+(H-58)+'" text-anchor="middle" font-size="12" font-family="Arial, Helvetica, Noto Sans, sans-serif" fill="'+muted+'">Составлено автоматически на основе данных отцовской линии</text>');
+  parts.push('</svg>');
+  return parts.join('');
+}
+
+function buildShezhireTreeSVGString(){
+  if(!state.persons.length) throw new Error('Дерево пустое');
+  const line = buildShezhirePaternalLine(state.persons, 10);
+  if(!line.length) throw new Error('Нет данных для шежире');
+
+  const W = 1684;
+  const H = 1191;
+  const bg = '#F6ECD2';
+  const paper = '#FCF5E3';
+  const border = '#8E6A2F';
+  const wood = '#7A4E1D';
+  const woodLt = '#A06C2B';
+  const ink = '#40280F';
+  const muted = '#6F5532';
+
+  const cx = W / 2;
+  const topY = 210;
+  const bottomY = H - 170;
+  const trunkW = 16;
+  const gap = line.length > 1 ? (bottomY - topY) / (line.length - 1) : 0;
+  const rootName = posterRootName();
+  const rootLines = wrapTextLines(rootName, 46, 2);
+
+  const parts = [];
+  parts.push('<?xml version="1.0" encoding="UTF-8"?>');
+  parts.push('<svg xmlns="http://www.w3.org/2000/svg" width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'">');
+  parts.push('<rect width="100%" height="100%" fill="'+bg+'"/>');
+  parts.push('<rect x="34" y="34" width="'+(W-68)+'" height="'+(H-68)+'" rx="18" fill="'+paper+'" stroke="'+border+'" stroke-width="3"/>');
+
+  // Header
+  parts.push('<text x="'+cx+'" y="94" text-anchor="middle" font-size="40" font-family="Georgia, Times New Roman, serif" font-weight="700" fill="'+ink+'">ШЕЖІРЕ АҒАШЫ</text>');
+  parts.push('<text x="'+cx+'" y="126" text-anchor="middle" font-size="17" font-family="Georgia, Times New Roman, serif" fill="'+muted+'">Әке жағынан таралатын ата-баба желісі</text>');
+  parts.push('<text x="'+cx+'" y="152" text-anchor="middle" font-size="16" font-family="Georgia, Times New Roman, serif" fill="'+muted+'">'+esc(rootLines[0]||'')+'</text>');
+  if(rootLines[1]) parts.push('<text x="'+cx+'" y="172" text-anchor="middle" font-size="16" font-family="Georgia, Times New Roman, serif" fill="'+muted+'">'+esc(rootLines[1])+'</text>');
+
+  // Trunk
+  parts.push('<rect x="'+(cx - trunkW/2)+'" y="'+(topY-24)+'" width="'+trunkW+'" height="'+(bottomY-topY+48)+'" rx="8" fill="'+wood+'" opacity="0.95"/>');
+  parts.push('<rect x="'+(cx - 3)+'" y="'+(topY-24)+'" width="3" height="'+(bottomY-topY+48)+'" fill="'+woodLt+'" opacity="0.65"/>');
+
+  const genLabels = ['Өзі','Әкесі','Атасы','Арғы атасы','Бабасы','Түп атасы','Жеті ата','8-ата','9-ата','10-ата'];
+
+  line.forEach((p, i) => {
+    const y = topY + i * gap;
+    const left = (i % 2 === 0);
+    const branchLen = 250 + Math.min(120, i*12);
+    const x2 = left ? (cx - branchLen) : (cx + branchLen);
+    const tx = left ? (x2 - 14) : (x2 + 14);
+    const anchor = left ? 'end' : 'start';
+    const name = fitTextChars(p.FullName || '', 34);
+    const role = (p.Role === 'Корень') ? '' : (p.Role || '');
+    const genLabel = genLabels[i] || ((i+1)+'-ата');
+
+    // branch
+    parts.push('<path d="M '+cx+' '+y+' C '+(left?cx-70:cx+70)+' '+(y-8)+' '+(left?x2+35:x2-35)+' '+(y-8)+' '+x2+' '+y+'" stroke="'+wood+'" stroke-width="6" fill="none" stroke-linecap="round"/>');
+    parts.push('<circle cx="'+cx+'" cy="'+y+'" r="7" fill="'+woodLt+'"/>');
+    parts.push('<circle cx="'+x2+'" cy="'+y+'" r="5.5" fill="'+woodLt+'"/>');
+
+    parts.push('<text x="'+tx+'" y="'+(y-14)+'" text-anchor="'+anchor+'" font-size="21" font-family="Georgia, Times New Roman, serif" font-weight="700" fill="'+ink+'">'+esc(name)+'</text>');
+    parts.push('<text x="'+tx+'" y="'+(y+8)+'" text-anchor="'+anchor+'" font-size="12" font-family="Arial, Helvetica, Noto Sans, sans-serif" fill="'+muted+'">'+esc(genLabel + (role ? ' • '+role : ''))+'</text>');
+  });
+
+  parts.push('<text x="'+cx+'" y="'+(H-58)+'" text-anchor="middle" font-size="12" font-family="Arial, Helvetica, Noto Sans, sans-serif" fill="'+muted+'">Авто-режим: имена по отцовской линии (жети ата)</text>');
+  parts.push('</svg>');
+  return parts.join('');
+}
+
+function buildLayoutBowTie(persons){
+  if (!persons.length) return { positions:{}, canvasW:900, canvasH:600, parentsOf:{} };
+
+  const { byId, parentsOf } = buildParentsIndex(persons);
+  const rootP = getRootPerson();
+  const rootID = rootP ? rootP.ID : persons[0].ID;
+
+  // side: -1 paternal (left), +1 maternal (right), 0 root
+  const side = {};
+  const gen  = {};
+  const idx  = {}; // index within generation for that side (binary pedigree)
+
+  side[rootID] = 0;
+  gen[rootID] = 0;
+  idx[rootID] = 0;
+
+  function visit(childID){
+    const parents = parentsOf[childID] || [];
+    parents.forEach((par, k) => {
+      const pid = par.ID;
+      if (gen[pid] !== undefined) return;
+      // For root: father left, mother right. For deeper gens: inherit side.
+      const childSide = side[childID] || 0;
+      const s = (childSide === 0) ? (par.Sex === 'F' ? 1 : -1) : childSide;
+      side[pid] = s;
+      gen[pid] = (gen[childID] || 0) + 1;
+      idx[pid] = (idx[childID] || 0) * 2 + (par.Sex === 'F' ? 1 : 0);
+      visit(pid);
+    });
+  }
+  visit(rootID);
+
+  const maxGen = Math.max(0, ...Object.values(gen));
+  const slots = Math.max(1, 1 << Math.min(12, maxGen)); // guard extreme depth
+  const SLOT_H = CH + 52; // a bit tighter than vertical
+  const canvasH = PAD*2 + slots * SLOT_H;
+
+  const centerX = PAD + (maxGen + 1) * (CW + 44) + CW/2;
+  const canvasW = Math.max(1100, centerX + (maxGen + 1) * (CW + 44) + PAD);
+
+  function yFor(g, i){
+    const block = Math.max(1, 1 << (Math.max(0, maxGen - g)));
+    const centerSlot = (i * block) + (block / 2);
+    const cy = PAD + centerSlot * SLOT_H;
+    return Math.round(cy - CH/2);
+  }
+
+  const positions = {};
+  persons.forEach(p => {
+    const g = gen[p.ID] ?? 0;
+    const s = side[p.ID] ?? 0;
+    const i = idx[p.ID] ?? 0;
+    const x = (s === 0)
+      ? Math.round(centerX - CW/2)
+      : Math.round(centerX + s * g * (CW + 44) - CW/2);
+    const y = yFor(g, i);
+    positions[p.ID] = { x, y, gen:g, side:s, idx:i };
+  });
+
+  return { positions, canvasW, canvasH, maxGen, parentsOf, gen, rootID };
 }
 
 // ─── Persistence ─────────────────────────────────────────────
@@ -795,10 +1088,11 @@ function renderTree() {
       const c1y = childTop - Math.abs(midY - childTop) * 0.3;
       const c2x = parentCx;
       const c2y = parentBottom + Math.abs(parentBottom - midY) * 0.3;
+      const lineColor = par.Sex === 'F' ? LINE_MOTHER : LINE_FATHER;
 
-      bezier(svg, childCx, childTop, c1x, c1y, c2x, c2y, parentCx, parentBottom, '#B0A9A0', '1.6');
-      dot(svg, childCx, childTop, '#C9C3BA', 3);
-      dot(svg, parentCx, parentBottom, '#C9C3BA', 3);
+      bezier(svg, childCx, childTop, c1x, c1y, c2x, c2y, parentCx, parentBottom, lineColor, '1.9');
+      dot(svg, childCx, childTop, '#A6B7AF', 2.6);
+      dot(svg, parentCx, parentBottom, '#A6B7AF', 2.6);
     });
   });
 
@@ -959,9 +1253,18 @@ function downloadBlob(blob, filename){
 }
 
 /** Векторный экспорт: один UTF-8 текст, без canvas — самый надёжный формат. */
-function buildExportSVGString(){
+function buildExportSVGString(mode){
   if(!state.persons.length) throw new Error('Дерево пустое');
-  const { positions, canvasW, canvasH, parentsOf } = buildLayout(state.persons);
+  if(mode === 'shezhire') return buildShezhireSVGString();
+  if(mode === 'shezhire-tree') return buildShezhireTreeSVGString();
+  const layoutMode = mode || 'vertical';
+  const layout = (layoutMode === 'bowtie') ? buildLayoutBowTie(state.persons) : buildLayout(state.persons);
+  const { positions, canvasW, canvasH, parentsOf } = layout;
+  const headerH = 96; // reserved top area for poster header
+  const yShift = headerH;
+  const svgH = canvasH + headerH;
+  const rootName = posterRootName();
+  const titleLines = wrapTextLines(rootName, 42, 2);
   const bg = '#E8F0EC';
   const surface = '#FFFFFF';
   const border = '#C5D9CE';
@@ -972,26 +1275,46 @@ function buildExportSVGString(){
   const muted = '#5A6B63';
   const parts = [];
   parts.push('<?xml version="1.0" encoding="UTF-8"?>');
-  parts.push('<svg xmlns="http://www.w3.org/2000/svg" width="'+canvasW+'" height="'+canvasH+'" viewBox="0 0 '+canvasW+' '+canvasH+'">');
+  parts.push('<svg xmlns="http://www.w3.org/2000/svg" width="'+canvasW+'" height="'+svgH+'" viewBox="0 0 '+canvasW+' '+svgH+'">');
   parts.push('<rect width="100%" height="100%" fill="'+bg+'"/>');
+  // ── Poster header ──
+  parts.push('<rect x="0" y="0" width="'+canvasW+'" height="'+headerH+'" fill="'+surface+'"/>');
+  parts.push('<text x="'+(canvasW/2)+'" y="30" text-anchor="middle" font-size="14" font-family="Georgia, Times New Roman, serif" font-weight="700" fill="'+navy+'">Семейное древо</text>');
+  parts.push('<text x="'+(canvasW/2)+'" y="54" text-anchor="middle" font-size="20" font-family="Georgia, Times New Roman, serif" font-weight="700" fill="'+navy+'">');
+  parts.push('<tspan x="'+(canvasW/2)+'" dy="0">'+esc(titleLines[0] || '')+'</tspan>');
+  parts.push('<tspan x="'+(canvasW/2)+'" dy="22">'+esc(titleLines[1] || '')+'</tspan>');
+  parts.push('</text>');
+  parts.push('<line x1="28" y1="'+(headerH-18)+'" x2="'+(canvasW-28)+'" y2="'+(headerH-18)+'" stroke="'+border+'" stroke-width="1.2" stroke-linecap="round"/>');
+
+  // Legend (compact, print-friendly)
+  parts.push('<g opacity="0.95">');
+  parts.push('<line x1="'+(canvasW-220)+'" y1="26" x2="'+(canvasW-190)+'" y2="26" stroke="'+LINE_FATHER+'" stroke-width="4" stroke-linecap="round"/>');
+  parts.push('<text x="'+(canvasW-184)+'" y="30" font-size="10" font-family="Arial, Helvetica, Noto Sans, sans-serif" fill="'+muted+'">отцовская линия</text>');
+  parts.push('<line x1="'+(canvasW-220)+'" y1="46" x2="'+(canvasW-190)+'" y2="46" stroke="'+LINE_MOTHER+'" stroke-width="4" stroke-linecap="round"/>');
+  parts.push('<text x="'+(canvasW-184)+'" y="50" font-size="10" font-family="Arial, Helvetica, Noto Sans, sans-serif" fill="'+muted+'">материнская линия</text>');
+  parts.push('</g>');
   state.persons.forEach(child => {
     const parents = parentsOf[child.ID] || [];
     if(!parents.length) return;
     const cp = positions[child.ID];
     if(!cp) return;
     const childCx = cp.x + CW / 2;
-    const childTop = cp.y;
+    const childTop = cp.y + yShift;
     parents.forEach(par => {
       const pp = positions[par.ID];
       if(!pp) return;
       const parentCx = pp.x + CW / 2;
-      const parentBottom = pp.y + CH;
+      const parentBottom = pp.y + CH + yShift;
       const midY = (childTop + parentBottom) / 2;
-      const c1x = childCx;
-      const c1y = childTop - Math.abs(midY - childTop) * 0.3;
-      const c2x = parentCx;
-      const c2y = parentBottom + Math.abs(parentBottom - midY) * 0.3;
-      parts.push('<path d="M '+childCx+' '+childTop+' C '+c1x+' '+c1y+', '+c2x+' '+c2y+', '+parentCx+' '+parentBottom+'" stroke="#B0A9A0" stroke-width="1.6" fill="none" stroke-linecap="round"/>');
+      const stroke = (par.Sex === 'F') ? LINE_MOTHER : LINE_FATHER;
+      // Orthogonal connector: childTop -> midY -> parentBottom (print-friendly)
+      parts.push(
+        '<path d="M '+childCx+' '+childTop+
+        ' L '+childCx+' '+midY+
+        ' L '+parentCx+' '+midY+
+        ' L '+parentCx+' '+parentBottom+
+        '" stroke="'+stroke+'" stroke-width="2.1" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.72"/>'
+      );
     });
   });
   state.persons.forEach(p => {
@@ -1001,26 +1324,39 @@ function buildExportSVGString(){
     const b = displayDate(p.BirthDate || '');
     const d = displayDate(p.DeathDate || '');
     const dates = (b || d) ? (b || '?') + (d ? ' - ' + d : '') : '';
+    const y = pos.y + yShift;
     parts.push('<g>');
-    parts.push('<rect x="'+pos.x+'" y="'+pos.y+'" width="'+CW+'" height="'+CH+'" rx="10" fill="'+surface+'" stroke="'+border+'" stroke-width="1.5"/>');
-    parts.push('<rect x="'+pos.x+'" y="'+pos.y+'" width="'+CW+'" height="5" rx="3" fill="'+top+'"/>');
-    parts.push('<text x="'+(pos.x+11)+'" y="'+(pos.y+18)+'" font-size="8" font-family="system-ui,sans-serif" font-weight="700" fill="'+top+'">'+esc((p.Role||'')+' '+(p.Sex==='M'?'♂':'♀'))+'</text>');
-    parts.push('<text x="'+(pos.x+11)+'" y="'+(pos.y+36)+'" font-size="13" font-family="system-ui,sans-serif" font-weight="700" fill="'+navy+'">'+esc(p.FullName || '')+'</text>');
-    if(dates) parts.push('<text x="'+(pos.x+11)+'" y="'+(pos.y+52)+'" font-size="10" font-family="system-ui,sans-serif" fill="'+muted+'">'+esc(dates)+'</text>');
-    if(p.BirthPlace) parts.push('<text x="'+(pos.x+11)+'" y="'+(pos.y+66)+'" font-size="9" font-family="system-ui,sans-serif" fill="'+muted+'">'+esc('Рожд.: '+p.BirthPlace)+'</text>');
-    if(p.DeathPlace) parts.push('<text x="'+(pos.x+11)+'" y="'+(pos.y+79)+'" font-size="9" font-family="system-ui,sans-serif" fill="'+muted+'">'+esc('Захор.: '+p.DeathPlace)+'</text>');
+    parts.push('<rect x="'+pos.x+'" y="'+y+'" width="'+CW+'" height="'+CH+'" rx="10" fill="'+surface+'" stroke="'+border+'" stroke-width="1.5"/>');
+    parts.push('<rect x="'+pos.x+'" y="'+y+'" width="'+CW+'" height="5" rx="3" fill="'+top+'"/>');
+    const roleLabel = (p.Role === 'Корень') ? '' : (p.Role || '');
+    const roleLine = roleLabel ? (roleLabel + ' ' + (p.Sex==='M'?'♂':'♀')) : (p.Sex==='M'?'♂':'♀');
+    parts.push('<text x="'+(pos.x+11)+'" y="'+(y+18)+'" font-size="7.5" font-family="Arial, Helvetica, Noto Sans, sans-serif" font-weight="700" fill="'+top+'">'+esc(fitTextChars(roleLine, 26))+'</text>');
+    // Full name: force 2 lines (like HTML), with ellipsis if overflow
+    const nameLines = wrapTextLines(p.FullName || '', 22, 2);
+    const nameX = pos.x + 11;
+    const nameY = y + 34;
+    parts.push('<text x="'+nameX+'" y="'+nameY+'" font-size="13" font-family="Arial, Helvetica, Noto Sans, sans-serif" font-weight="700" fill="'+navy+'">');
+    parts.push('<tspan x="'+nameX+'" dy="0">'+esc(nameLines[0] || '')+'</tspan>');
+    parts.push('<tspan x="'+nameX+'" dy="15">'+esc(nameLines[1] || '')+'</tspan>');
+    parts.push('</text>');
+
+    const afterNameY = nameY + 32;
+    if(dates) parts.push('<text x="'+(pos.x+11)+'" y="'+(afterNameY)+'" font-size="10" font-family="Arial, Helvetica, Noto Sans, sans-serif" fill="#425A50">'+esc(fitTextChars(dates, 28))+'</text>');
+    if(p.BirthPlace) parts.push('<text x="'+(pos.x+11)+'" y="'+(afterNameY+15)+'" font-size="9" font-family="Arial, Helvetica, Noto Sans, sans-serif" fill="#51665D">'+esc(fitTextChars('Рожд.: '+p.BirthPlace, 30))+'</text>');
+    if(p.DeathPlace) parts.push('<text x="'+(pos.x+11)+'" y="'+(afterNameY+29)+'" font-size="9" font-family="Arial, Helvetica, Noto Sans, sans-serif" fill="#51665D">'+esc(fitTextChars('Захор.: '+p.DeathPlace, 30))+'</text>');
     parts.push('</g>');
   });
   parts.push('</svg>');
   return parts.join('');
 }
 
-function exportSVG(){
+function exportSVG(mode){
   try{
-    const svg = buildExportSVGString();
+    const svg = buildExportSVGString(mode);
     const blob = new Blob([svg], { type:'image/svg+xml;charset=utf-8' });
-    downloadBlob(blob, 'sejire-tree.svg');
-    toast('Скачан файл sejire-tree.svg');
+    const m = (mode === 'bowtie') ? 'bowtie' : 'vertical';
+    downloadBlob(blob, 'sejire-tree-'+m+'.svg');
+    toast('Скачан файл sejire-tree-'+m+'.svg');
   }catch(e){
     console.error(e);
     toast('Ошибка: ' + (e && e.message ? e.message : ''));
@@ -1028,7 +1364,7 @@ function exportSVG(){
 }
 
 /** PDF: отдельное окно + системная печать Safari («Сохранить как PDF»). Без генерации PDF в JS. */
-function exportPDFPrint(){
+function exportPDFPrint(mode){
   if(!state.persons.length){ toast('Дерево пустое'); return; }
   const w = window.open('', '_blank');
   if(!w){
@@ -1036,10 +1372,15 @@ function exportPDFPrint(){
     return;
   }
   try{
-    const svg = buildExportSVGString();
+    const svg = buildExportSVGString(mode);
     const doc = w.document;
     doc.open();
-    doc.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>Sejire — печать</title><style>@page{size:A4 landscape;margin:10mm}html,body{margin:0;background:#E8F0EC}body{display:flex;justify-content:center;align-items:flex-start}svg{max-width:100%;height:auto;display:block}</style></head><body>');
+    doc.write(
+      '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Sejire — печать</title>' +
+      '<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">' +
+      '<style>@page{size:A3 landscape;margin:10mm}html,body{margin:0;background:#E8F0EC;font-family:"DM Sans",sans-serif}body{display:flex;justify-content:center;align-items:flex-start}svg{max-width:100%;height:auto;display:block}</style>' +
+      '</head><body>'
+    );
     doc.write(svg);
     doc.write('</body></html>');
     doc.close();
@@ -1089,18 +1430,41 @@ function scaleCanvasToMaxSide(src, maxSide){
   return out;
 }
 
-function renderTreeExportCanvas(){
+function renderTreeExportCanvas(mode){
   if(!state.persons.length) throw new Error('Дерево пустое');
-  const { positions, canvasW, canvasH, parentsOf } = buildLayout(state.persons);
+  const layoutMode = mode || 'vertical';
+  const layout = (layoutMode === 'bowtie') ? buildLayoutBowTie(state.persons) : buildLayout(state.persons);
+  const { positions, canvasW, canvasH, parentsOf } = layout;
+  const headerH = 96;
+  const yShift = headerH;
   const c = document.createElement('canvas');
   c.width = canvasW;
-  c.height = canvasH;
+  c.height = canvasH + headerH;
   const ctx = c.getContext('2d');
   ctx.fillStyle = '#E8F0EC';
-  ctx.fillRect(0, 0, canvasW, canvasH);
+  ctx.fillRect(0, 0, canvasW, canvasH + headerH);
 
-  ctx.strokeStyle = '#B0A9A0';
-  ctx.lineWidth = 1.6;
+  // header (poster)
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fillRect(0, 0, canvasW, headerH);
+  ctx.strokeStyle = '#C5D9CE';
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.moveTo(28, headerH - 18);
+  ctx.lineTo(canvasW - 28, headerH - 18);
+  ctx.stroke();
+
+  ctx.fillStyle = '#1B4D3E';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  ctx.font = '700 14px Georgia, "Times New Roman", serif';
+  ctx.fillText('Семейное древо', canvasW / 2, 22);
+  ctx.font = '700 22px Georgia, "Times New Roman", serif';
+  ctx.fillText(truncateExportText(ctx, posterRootName(), canvasW - 56), canvasW / 2, 48);
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'top';
+
+  ctx.lineWidth = 2.1;
   ctx.lineCap = 'round';
   state.persons.forEach(child => {
     const parents = parentsOf[child.ID] || [];
@@ -1108,17 +1472,18 @@ function renderTreeExportCanvas(){
     const childPos = positions[child.ID];
     if(!childPos) return;
     const childCx = childPos.x + CW / 2;
-    const childTop = childPos.y;
+    const childTop = childPos.y + yShift;
     parents.forEach(par => {
       const pp = positions[par.ID];
       if(!pp) return;
       const parentCx = pp.x + CW / 2;
-      const parentBottom = pp.y + CH;
+      const parentBottom = pp.y + CH + yShift;
       const midY = (childTop + parentBottom) / 2;
       const c1x = childCx;
       const c1y = childTop - Math.abs(midY - childTop) * 0.3;
       const c2x = parentCx;
       const c2y = parentBottom + Math.abs(parentBottom - midY) * 0.3;
+      ctx.strokeStyle = par.Sex === 'F' ? LINE_MOTHER : LINE_FATHER;
       ctx.beginPath();
       ctx.moveTo(childCx, childTop);
       ctx.bezierCurveTo(c1x, c1y, c2x, c2y, parentCx, parentBottom);
@@ -1140,44 +1505,45 @@ function renderTreeExportCanvas(){
     if(!pos) return;
     const topC = p.Role === 'Корень' ? topRoot : (p.Sex === 'F' ? topFemale : topMale);
 
-    fillRoundRectPath(ctx, pos.x, pos.y, CW, CH, 10);
+    fillRoundRectPath(ctx, pos.x, pos.y + yShift, CW, CH, 10);
     ctx.fillStyle = '#FFFFFF';
     ctx.fill();
     ctx.strokeStyle = border;
     ctx.lineWidth = 1.5;
     ctx.stroke();
 
-    fillRoundRectPath(ctx, pos.x, pos.y, CW, 5, 3);
+    fillRoundRectPath(ctx, pos.x, pos.y + yShift, CW, 5, 3);
     ctx.fillStyle = topC;
     ctx.fill();
 
-    const roleStr = (p.Role || '') + ' ' + (p.Sex === 'M' ? '♂' : '♀');
-    ctx.font = '700 8px system-ui, -apple-system, "Segoe UI", sans-serif';
+    const roleLabel = (p.Role === 'Корень') ? '' : (p.Role || '');
+    const roleStr = roleLabel ? (roleLabel + ' ' + (p.Sex === 'M' ? '♂' : '♀')) : (p.Sex === 'M' ? '♂' : '♀');
+    ctx.font = '700 7.5px Arial, Helvetica, "Noto Sans", sans-serif';
     ctx.fillStyle = topC;
-    ctx.fillText(truncateExportText(ctx, roleStr, tw), pos.x + 11, pos.y + 8);
+    ctx.fillText(truncateExportText(ctx, roleStr, tw), pos.x + 11, pos.y + yShift + 8);
 
-    ctx.font = '700 13px system-ui, -apple-system, "Segoe UI", sans-serif';
+    ctx.font = '700 13px Arial, Helvetica, "Noto Sans", sans-serif';
     ctx.fillStyle = textNavy;
-    ctx.fillText(truncateExportText(ctx, p.FullName || '', tw), pos.x + 11, pos.y + 22);
+    ctx.fillText(truncateExportText(ctx, p.FullName || '', tw), pos.x + 11, pos.y + yShift + 22);
 
     const b = displayDate(p.BirthDate || '');
     const d = displayDate(p.DeathDate || '');
     const dates = (b || d) ? (b || '?') + (d ? ' – ' + d : '') : '';
-    let lineY = pos.y + 42;
+    let lineY = pos.y + yShift + 42;
     if(dates){
-      ctx.font = '400 10px system-ui, -apple-system, sans-serif';
+      ctx.font = '400 10px Arial, Helvetica, "Noto Sans", sans-serif';
       ctx.fillStyle = textMuted;
       ctx.fillText(truncateExportText(ctx, dates, tw), pos.x + 11, lineY);
       lineY += 14;
     }
     if(p.BirthPlace){
-      ctx.font = '400 9px system-ui, -apple-system, sans-serif';
+      ctx.font = '400 9px Arial, Helvetica, "Noto Sans", sans-serif';
       ctx.fillStyle = textMuted;
       ctx.fillText(truncateExportText(ctx, 'Рожд.: ' + p.BirthPlace, tw), pos.x + 11, lineY);
       lineY += 12;
     }
     if(p.DeathPlace){
-      ctx.font = '400 9px system-ui, -apple-system, sans-serif';
+      ctx.font = '400 9px Arial, Helvetica, "Noto Sans", sans-serif';
       ctx.fillStyle = textMuted;
       ctx.fillText(truncateExportText(ctx, 'Захор.: ' + p.DeathPlace, tw), pos.x + 11, lineY);
     }
@@ -1199,16 +1565,17 @@ async function canvasToPngBlob(canvas){
   return blob;
 }
 
-async function exportPNG(){
+async function exportPNG(mode){
   try{
     if(!state.persons.length) throw new Error('Дерево пустое');
+    const m = (mode === 'bowtie') ? 'bowtie' : 'vertical';
     toast('Готовлю PNG…');
-    const raw = renderTreeExportCanvas();
+    const raw = renderTreeExportCanvas(m);
     const canvas = scaleCanvasToMaxSide(raw, 2400);
     if(!canvas || !canvas.width || !canvas.height) throw new Error('Пустой canvas');
     const blob = await canvasToPngBlob(canvas);
-    downloadBlob(blob, 'sejire-tree.png');
-    toast('Скачан sejire-tree.png');
+    downloadBlob(blob, 'sejire-tree-'+m+'.png');
+    toast('Скачан sejire-tree-'+m+'.png');
   }catch(e){
     console.error(e);
     toast('Ошибка PNG: ' + (e && e.message ? e.message : ''));
