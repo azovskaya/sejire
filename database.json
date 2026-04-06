@@ -1,0 +1,480 @@
+{
+  "persons": [
+    {
+      "ID": "INDI_17726184067980",
+      "TargetID": "",
+      "FullName": "Азовский Владимир Алексеевич",
+      "Sex": "M",
+      "BirthDate": "2014-03-03",
+      "DeathDate": "",
+      "BirthPlace": "Астана",
+      "DeathPlace": "",
+      "Role": "Корень"
+    },
+    {
+      "ID": "INDI_17726184500000",
+      "TargetID": "INDI_17726184067980",
+      "FullName": "Азовский Алексей Викторович",
+      "Sex": "M",
+      "BirthDate": "06/07/1984",
+      "DeathDate": "",
+      "BirthPlace": "Уральск",
+      "DeathPlace": "",
+      "Role": "Отец"
+    },
+    {
+      "ID": "INDI_17726185171934",
+      "TargetID": "INDI_17726184067980",
+      "FullName": "Азовская (алексеева) Валентина Николаевна",
+      "Sex": "F",
+      "BirthDate": "10.11.1984",
+      "DeathDate": "",
+      "BirthPlace": "п Светлый",
+      "DeathPlace": "",
+      "Role": "Мать"
+    },
+    {
+      "ID": "INDI_17726185978083",
+      "TargetID": "INDI_17726184500000",
+      "FullName": "Азовская Валентина Алексеевна",
+      "Sex": "F",
+      "BirthDate": "19/05/1958",
+      "DeathDate": "",
+      "BirthPlace": "Уральск",
+      "DeathPlace": "",
+      "Role": "Бабушка"
+    },
+    {
+      "ID": "INDI_17726186711537",
+      "TargetID": "INDI_17726184500000",
+      "FullName": "Гапченко Петр",
+      "Sex": "M",
+      "BirthDate": "",
+      "DeathDate": "",
+      "BirthPlace": "Уральск",
+      "DeathPlace": "",
+      "Role": "Дед"
+    },
+    {
+      "ID": "INDI_17726187110514",
+      "TargetID": "INDI_17726185978083",
+      "FullName": "Азовский Алексей Александрович",
+      "Sex": "M",
+      "BirthDate": "30/03/1923",
+      "DeathDate": "",
+      "BirthPlace": "Уральск",
+      "DeathPlace": "Подстепное",
+      "Role": "Прадед"
+    },
+    {
+      "ID": "INDI_17726188167261",
+      "TargetID": "INDI_17726185978083",
+      "FullName": "Азовская (базилова) Мария Сергеевна",
+      "Sex": "F",
+      "BirthDate": "30/12/1927",
+      "DeathDate": "",
+      "BirthPlace": "Николаев",
+      "DeathPlace": "Подстепное",
+      "Role": "Прабабушка"
+    },
+    {
+      "ID": "INDI_17726188858494",
+      "TargetID": "INDI_17726185171934",
+      "FullName": "Алексеев Николай Тимофеевич",
+      "Sex": "M",
+      "BirthDate": "",
+      "DeathDate": "",
+      "BirthPlace": "Светлый",
+      "DeathPlace": "",
+      "Role": "Дед"
+    },
+    {
+      "ID": "INDI_17726189199619",
+      "TargetID": "INDI_17726185171934",
+      "FullName": "Алексеева Любовь Васильевна",
+      "Sex": "F",
+      "BirthDate": "",
+      "DeathDate": "",
+      "BirthPlace": "",
+      "DeathPlace": "",
+      "Role": "Бабушка"
+    },
+    {
+      "ID": "INDI_17726216475944",
+      "TargetID": "INDI_17726188167261",
+      "FullName": "Базилова (некрасова) Аккулина Осиповна",
+      "Sex": "F",
+      "BirthDate": "12/04/1905",
+      "DeathDate": "17/09/1953",
+      "BirthPlace": "Николаев (не точно)",
+      "DeathPlace": "Подстепное",
+      "Role": "Прапрабабушка"
+    },
+    {
+      "ID": "INDI_17726218002522",
+      "TargetID": "INDI_17726188167261",
+      "FullName": "Базилов Сергей Афанасьевич",
+      "Sex": "M",
+      "BirthDate": "14.03.1901",
+      "DeathDate": "19.11.1946",
+      "BirthPlace": "Николаев (не точно)",
+      "DeathPlace": "Подстепное",
+      "Role": "Прапрадед"
+    },
+    {
+      "ID": "INDI_17728637494414",
+      "TargetID": "INDI_17726187110514",
+      "FullName": "Азовскова Клавдия Константиновна",
+      "Sex": "F",
+      "BirthDate": "23.11.1888",
+      "DeathDate": "14/10/1959",
+      "BirthPlace": "Уральск",
+      "DeathPlace": "Подстепное",
+      "Role": "Прапрабабушка"
+    },
+    {
+      "ID": "INDI_17728641910479",
+      "TargetID": "INDI_17726187110514",
+      "FullName": "Азовсков Александр Иванович",
+      "Sex": "M",
+      "BirthDate": "1885 не точно",
+      "DeathDate": "",
+      "BirthPlace": "Уральск",
+      "DeathPlace": "",
+      "Role": "Прапрадед"
+    }
+  ],
+  "commits": [
+    {
+      "Hash": "f3a0ce127495133bbe92047987ce10aee7f49bfae6a30cc7f8c270c98e0890e4",
+      "Timestamp": "2026-03-04T15:00:06+05:00",
+      "Action": "ADD",
+      "PersonID": "INDI_17726184067980",
+      "Details": "Азовский Владимир Алексеевич (Корень)"
+    },
+    {
+      "Hash": "de5a784996609c9204aacdf4eb6aaf7a3188606c0b91d163b464d4576a411508",
+      "Timestamp": "2026-03-04T15:00:50+05:00",
+      "Action": "ADD",
+      "PersonID": "INDI_17726184500000",
+      "Details": "Азовский Алексей Викторович (Отец)"
+    },
+    {
+      "Hash": "a7c21d48d3be756a7c7facda51896a7b3c02b868c1851c3d9c39112ff19fbf4d",
+      "Timestamp": "2026-03-04T15:01:57+05:00",
+      "Action": "ADD",
+      "PersonID": "INDI_17726185171934",
+      "Details": "Азовская (алексеева) Валентина Николаевна (Мать)"
+    },
+    {
+      "Hash": "c413591f9ff1324d65d0be6f67e94c92270dcd1e23f2cfed97f87db145eac0f4",
+      "Timestamp": "2026-03-04T15:03:17+05:00",
+      "Action": "ADD",
+      "PersonID": "INDI_17726185978083",
+      "Details": "Азовская Валентина Алексеевна (Бабушка)"
+    },
+    {
+      "Hash": "0212cb488a16031b5aa3514f44dfdbdcf15d7d08de354cac691adb7f5d816cd6",
+      "Timestamp": "2026-03-04T15:04:31+05:00",
+      "Action": "ADD",
+      "PersonID": "INDI_17726186711537",
+      "Details": "Гапченко Петр (Дед)"
+    },
+    {
+      "Hash": "013b26e06ece3135bd768b98466ebf58f6ad97797171ac66c73215459a382f43",
+      "Timestamp": "2026-03-04T15:05:11+05:00",
+      "Action": "ADD",
+      "PersonID": "INDI_17726187110514",
+      "Details": "Азовский Алексей Александрович (Прадед)"
+    },
+    {
+      "Hash": "b8431fb226070697707511cef52d38d9dcf5c6d8563fc17a6a30ea92e9ef201c",
+      "Timestamp": "2026-03-04T15:06:56+05:00",
+      "Action": "ADD",
+      "PersonID": "INDI_17726188167261",
+      "Details": "Азовская (базилова) Мария Сергеевна (Прабабушка)"
+    },
+    {
+      "Hash": "023f239a5ed937ecf1e85305dcb3e272725ac5694fec70e576b15b3ccace8d79",
+      "Timestamp": "2026-03-04T15:08:05+05:00",
+      "Action": "ADD",
+      "PersonID": "INDI_17726188858494",
+      "Details": "Алексеев Николай Тимофеевич (Дед)"
+    },
+    {
+      "Hash": "30167b2f4d5253d1974dc8fc3f5126461719831936f4f125f508c42da5341f58",
+      "Timestamp": "2026-03-04T15:08:39+05:00",
+      "Action": "ADD",
+      "PersonID": "INDI_17726189199619",
+      "Details": "Алексеева Любовь Васильевна (Бабушка)"
+    },
+    {
+      "Hash": "f659c6e5266089a0dd74ab588e7766391991be0090a3af1d6c0bc922eb0c48ff",
+      "Timestamp": "2026-03-04T15:10:02+05:00",
+      "Action": "SNAPSHOT",
+      "PersonID": "system",
+      "Details": "Arweave TX: ar_a36167c2d5dc693a224e8630c4355f66"
+    },
+    {
+      "Hash": "5fedc856fa1fe0131670728256beb13e87e9061af286ef554e5fe81564d62872",
+      "Timestamp": "2026-03-04T15:54:07+05:00",
+      "Action": "ADD",
+      "PersonID": "INDI_17726216475944",
+      "Details": "Базилова (некрасова) Аккулина Осиповна (Прапрабабушка)"
+    },
+    {
+      "Hash": "3a637f4faec7614ef2ab0ea1ea44171c29d888a54f1506dc892700ed2f908e51",
+      "Timestamp": "2026-03-04T15:56:40+05:00",
+      "Action": "ADD",
+      "PersonID": "INDI_17726218002522",
+      "Details": "Базилов Сергей Афанасьевич (Прапрадед)"
+    },
+    {
+      "Hash": "cb7830e6a67fc9164df8f1f058f7eac24f7d6a7141afcdb17b7f7702700f74a4",
+      "Timestamp": "2026-03-04T17:00:29+05:00",
+      "Action": "ADD",
+      "PersonID": "INDI_17726256290074",
+      "Details": "Аоывщшаьуцв (Корень)"
+    },
+    {
+      "Hash": "e7e4458e2d54e49c80d1806051dcb8a00f406f110cfb8c60e6d4854c4df12da2",
+      "Timestamp": "2026-03-05T20:27:25+05:00",
+      "Action": "DELETE",
+      "PersonID": "INDI_17726256290074",
+      "Details": "Person removed"
+    },
+    {
+      "Hash": "ca1ca974e8116b02ca5a7c30a86a81e73a67005c66f0dded96e987bb841df27c",
+      "Timestamp": "2026-03-07T11:09:09+05:00",
+      "Action": "ADD",
+      "PersonID": "INDI_17728637494414",
+      "Details": "Азовскова Клавдия Константиновна (Прапрабабушка)"
+    },
+    {
+      "Hash": "b5ba4a70419a56c834dd4aeff71d22c4134cab23dc1178c299a827fbf7d43356",
+      "Timestamp": "2026-03-07T11:16:31+05:00",
+      "Action": "ADD",
+      "PersonID": "INDI_17728641910479",
+      "Details": "Азовсков Александр Иванович (Прапрадед)"
+    },
+    {
+      "Hash": "01cebe3d5c71259b058a58d8cbcb7f662bdc590ce6305080afcea7c961501ec4",
+      "Timestamp": "2026-03-07T11:35:14+05:00",
+      "Action": "SNAPSHOT",
+      "PersonID": "system",
+      "Details": "Arweave TX: ar_5437f4f19b8be699d1fa2093f4464322"
+    },
+    {
+      "Hash": "ec0c9c9da67313f849682d9ec6ba5266017f81e49e3f7b67ce3f9bd4c4c36a0f",
+      "Timestamp": "2026-03-07T11:38:41+05:00",
+      "Action": "SNAPSHOT",
+      "PersonID": "system",
+      "Details": "Arweave TX: ar_5437f4f19b8be699d1fa2093f4464322"
+    },
+    {
+      "Hash": "d447ac102ba871e6bc2d7c458ebf648ff774516c80029e21e53fd053a3decb12",
+      "Timestamp": "2026-03-07T11:41:34+05:00",
+      "Action": "SNAPSHOT",
+      "PersonID": "system",
+      "Details": "Arweave TX: ar_5437f4f19b8be699d1fa2093f4464322"
+    },
+    {
+      "Hash": "1616f3e77c31fd9107637a252da867da844e1884a9b7fde5d775e5fdbaabf4cf",
+      "Timestamp": "2026-03-07T11:42:46+05:00",
+      "Action": "SNAPSHOT",
+      "PersonID": "system",
+      "Details": "Arweave TX: ar_5437f4f19b8be699d1fa2093f4464322"
+    },
+    {
+      "Hash": "4b3a5f672fc3d7438b75e60e6c98316d0499375337c52965be98e222ff7d5966",
+      "Timestamp": "2026-03-07T11:42:51+05:00",
+      "Action": "SNAPSHOT",
+      "PersonID": "system",
+      "Details": "Arweave TX: ar_5437f4f19b8be699d1fa2093f4464322"
+    },
+    {
+      "Hash": "45097f1372fb9c21de08149c212e753ff6f982eb441b1ab96b1923a8eba4bcf3",
+      "Timestamp": "2026-03-07T13:25:24+05:00",
+      "Action": "SNAPSHOT",
+      "PersonID": "system",
+      "Details": "Arweave TX: ar_e879a94b378e0de3a52ba47888b61e1e"
+    },
+    {
+      "Hash": "69747aa2ba47c74394b147fa9b327d55a63eae31e9dcbb1c2ab06c09d51d3e52",
+      "Timestamp": "2026-03-07T13:25:29+05:00",
+      "Action": "SNAPSHOT",
+      "PersonID": "system",
+      "Details": "Arweave TX: ar_e879a94b378e0de3a52ba47888b61e1e"
+    },
+    {
+      "Hash": "47908a940ec0c2f0b3265dbc67b6cbf7f17c336fa157feb60174e7382f5d1d60",
+      "Timestamp": "2026-03-07T13:26:09+05:00",
+      "Action": "UPDATE",
+      "PersonID": "INDI_17726185171934",
+      "Details": "Азовская (алексеева) Валентина Николаевна (Мать)"
+    },
+    {
+      "Hash": "6bae4f7b5b630db8f695585e527e1330a870f48c29954b4f11e5712030609f16",
+      "Timestamp": "2026-03-07T13:26:23+05:00",
+      "Action": "UPDATE",
+      "PersonID": "INDI_17726185171934",
+      "Details": "Азовская (алексеева) Валентина Николаевна (Мать)"
+    },
+    {
+      "Hash": "31b318cd1d8d8d45450b114608feb05d3a6b194e9149896af74b4bd65f132a84",
+      "Timestamp": "2026-03-07T13:26:50+05:00",
+      "Action": "UPDATE",
+      "PersonID": "INDI_17726185171934",
+      "Details": "Азовская (алексеева) Валентина Николаевна (Мать)"
+    },
+    {
+      "Hash": "96c547c341888d038b901b0c50551c7f9f66eb112517c25f4845f20b6623bb7b",
+      "Timestamp": "2026-03-07T13:27:40+05:00",
+      "Action": "UPDATE",
+      "PersonID": "INDI_17726185171934",
+      "Details": "Азовская (алексеева) Валентина Николаевна (Мать)"
+    },
+    {
+      "Hash": "6e58d477dbb5f6d5cf601985d4e2e69cbe0210ff9a1829c486dec881dbbc7b29",
+      "Timestamp": "2026-03-07T13:27:54+05:00",
+      "Action": "UPDATE",
+      "PersonID": "INDI_17726185171934",
+      "Details": "Азовская Валентина Николаевна (Мать)"
+    },
+    {
+      "Hash": "7cc85bd23b35d8f208d137f42413b0b85ff7b0d639d67fcc5457a9fb1ba947be",
+      "Timestamp": "2026-03-07T13:28:13+05:00",
+      "Action": "UPDATE",
+      "PersonID": "INDI_17726185171934",
+      "Details": "Азовская (алексеева) Валентина Николаевна (Мать)"
+    },
+    {
+      "Hash": "daac256fb25d68b92567bdd17709eb2ca8dc9df51c1c17ca133f34dcd2c7c96f",
+      "Timestamp": "2026-03-07T13:39:53+05:00",
+      "Action": "UPDATE",
+      "PersonID": "INDI_17726218002522",
+      "Details": "Базилов Сергей Афанасьевич (Прапрадед)"
+    },
+    {
+      "Hash": "223b6bfb631f699797a7eaacf18e438d37d8e4012573aa6ab122def55cee9257",
+      "Timestamp": "2026-03-07T13:41:41+05:00",
+      "Action": "UPDATE",
+      "PersonID": "INDI_17726216475944",
+      "Details": "Базилова (некрасова) Аккулина Осиповна (Прапрабабушка)"
+    },
+    {
+      "Hash": "121d1a70754b30d199131d849f5b2addee98153d4688afe37c18af41ab9e0bc9",
+      "Timestamp": "2026-03-07T13:47:19+05:00",
+      "Action": "UPDATE",
+      "PersonID": "INDI_17728637494414",
+      "Details": "Азовскова Клавдия Константиновна (Прапрабабушка)"
+    },
+    {
+      "Hash": "7692862ccc92deb06181d1bbde0b6efb4e953d47ac8b024751596dcddcc4e4f7",
+      "Timestamp": "2026-03-07T13:54:56+05:00",
+      "Action": "UPDATE",
+      "PersonID": "INDI_17728641910479",
+      "Details": "Азовсков Александр Иванович (Прапрадед)"
+    },
+    {
+      "Hash": "1b3642381024150c9e735d7dd1d8244efd09c67979facc08b22482577bab1387",
+      "Timestamp": "2026-03-07T14:19:37+05:00",
+      "Action": "UPDATE",
+      "PersonID": "INDI_17726187110514",
+      "Details": "Азовский Алексей Александрович (Прадед)"
+    },
+    {
+      "Hash": "97147781331a5886b290396b4c091f36a5c286ed856c6693669be48d6e5ffbf9",
+      "Timestamp": "2026-03-07T14:20:12+05:00",
+      "Action": "UPDATE",
+      "PersonID": "INDI_17726188167261",
+      "Details": "Азовская (базилова) Мария Сергеевна (Прабабушка)"
+    },
+    {
+      "Hash": "84bada4204323605e7511e6790340b4cbf90893e4f48d3d286467edaac6df8d1",
+      "Timestamp": "2026-03-07T14:21:14+05:00",
+      "Action": "UPDATE",
+      "PersonID": "INDI_17726188167261",
+      "Details": "Азовская (базилова) Мария Сергеевна (Прабабушка)"
+    },
+    {
+      "Hash": "5aed07c0ef8f2e95f77279240910df11ea52496333ac64f35cd37a621cc6cfa6",
+      "Timestamp": "2026-03-07T14:35:30+05:00",
+      "Action": "UPDATE",
+      "PersonID": "INDI_17726185978083",
+      "Details": "Азовская Валентина Алексеевна (Бабушка)"
+    },
+    {
+      "Hash": "6de4cd11167cd905f752f8b38f4be37e69a2d922ff3989dbbd89c626d2ddbdfc",
+      "Timestamp": "2026-03-07T14:35:55+05:00",
+      "Action": "UPDATE",
+      "PersonID": "INDI_17726184500000",
+      "Details": "Азовский Алексей Викторович (Отец)"
+    },
+    {
+      "Hash": "8695ce3403e7d62d1bf9af8a60296d29b321cb9d5d335ad0abaaf48ff2f31273",
+      "Timestamp": "2026-03-07T14:36:13+05:00",
+      "Action": "UPDATE",
+      "PersonID": "INDI_17726184067980",
+      "Details": "Азовский Владимир Алексеевич (Корень)"
+    },
+    {
+      "Hash": "82487c35e082b598792b7190119a2b73fbf90727d6687aa56902965f1b40c7ce",
+      "Timestamp": "2026-03-07T14:38:15+05:00",
+      "Action": "SNAPSHOT",
+      "PersonID": "system",
+      "Details": "Arweave TX: ar_d8e0ce36d2f6de94b71c1e1bc870e65b"
+    },
+    {
+      "Hash": "7097183d6fa67778121f65dc3e79a6ab72104a5ba2fec3563cbb9c570ad0b6d2",
+      "Timestamp": "2026-03-07T14:38:20+05:00",
+      "Action": "SNAPSHOT",
+      "PersonID": "system",
+      "Details": "Arweave TX: ar_d8e0ce36d2f6de94b71c1e1bc870e65b"
+    },
+    {
+      "Hash": "8f3fae8ca3caa9b1292017eff854446eef18c8c60833e904995da98f8caaeae6",
+      "Timestamp": "2026-03-07T14:58:08+05:00",
+      "Action": "SNAPSHOT",
+      "PersonID": "system",
+      "Details": "Arweave TX: ar_d8e0ce36d2f6de94b71c1e1bc870e65b"
+    },
+    {
+      "Hash": "c0ad5c1f0447f720cf4c50b93e5d4d1e37a20849cd07cd17acc90426cc1f5839",
+      "Timestamp": "2026-04-02T20:00:42+05:00",
+      "Action": "SNAPSHOT",
+      "PersonID": "system",
+      "Details": "Arweave TX: ar_d8e0ce36d2f6de94b71c1e1bc870e65b"
+    },
+    {
+      "Hash": "15baaf1152c1683dac9bc0bb44e0d683e58ac6d815dae2b2e2bcdde155b5da53",
+      "Timestamp": "2026-04-02T20:49:47+05:00",
+      "Action": "UPDATE",
+      "PersonID": "INDI_17726188858494",
+      "Details": "Алексеев Николай Тимофеевич (Дед)"
+    },
+    {
+      "Hash": "15618fbcc17a81e1da0359f6f354f30530bbe79955906e9a84de91e9d3e52581",
+      "Timestamp": "2026-04-02T20:50:06+05:00",
+      "Action": "UPDATE",
+      "PersonID": "INDI_17726188858494",
+      "Details": "Алексеев Николай Тимофеевич (Дед)"
+    },
+    {
+      "Hash": "6ff2021fbd8dda258114dd0e3c7bb2d711b7d821ccceaf186001a11813153293",
+      "Timestamp": "2026-04-02T20:52:04+05:00",
+      "Action": "ADD",
+      "PersonID": "INDI_17751451244313",
+      "Details": "Тест (Отец)"
+    },
+    {
+      "Hash": "ca45ea9477ee6ac4e23c0bde839979a08c8cb8cbc383daac25d9c51481e7a4f6",
+      "Timestamp": "2026-04-02T20:52:32+05:00",
+      "Action": "DELETE",
+      "PersonID": "INDI_17751451244313",
+      "Details": "Person removed"
+    }
+  ],
+  "arweaveHash": "ar_d8e0ce36d2f6de94b71c1e1bc870e65b",
+  "lastSaved": "2026-04-02T20:52:32+05:00"
+}

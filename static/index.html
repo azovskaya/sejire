@@ -1,0 +1,1251 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sejire — Генеалогическое Древо</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#E8F0EC; --surface:#FFF; --navy:#1B4D3E;
+  --gold:#5B8A72; --gold-lt:#C8E6D4;
+  --male:#2D7D5E; --female:#0F766E;
+  --root-c:#0F766E; --root-lt:#CCFBF1;
+  --text:#1A2E26; --muted:#5A6B63; --border:#C5D9CE;
+  --shadow:0 1px 8px rgba(27,77,62,.10);
+  --shadow-lg:0 6px 24px rgba(27,77,62,.14);
+  --btn-bg:#4A7C59; --btn-hover:#5A8F69;
+  --cw:176px; --ch:152px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:'DM Sans',sans-serif;color:var(--text)}
+body{background:var(--bg);display:flex;flex-direction:column;overflow:hidden}
+
+/* Header */
+header{background:var(--navy);color:#fff;height:54px;padding:0 18px;display:flex;align-items:center;gap:10px;flex-shrink:0;box-shadow:0 2px 14px rgba(0,0,0,.22);z-index:100}
+.logo{font-family:'Playfair Display',serif;font-size:20px;font-weight:700;letter-spacing:0;color:var(--gold-lt)}
+.logo span{color:rgba(255,255,255,.38);font-weight:400;font-size:11px;letter-spacing:1px;margin-left:7px}
+.spacer{flex:1}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:6px 13px;border:none;border-radius:7px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;cursor:pointer;transition:all .16s;white-space:nowrap;background:var(--btn-bg);color:#fff}
+.btn:hover{background:var(--btn-hover);transform:translateY(-1px)}
+.btn:active{transform:translateY(0)}
+.btn-primary{background:var(--btn-bg);color:#fff}
+.btn-danger{background:var(--btn-bg);color:#fff}
+.btn-arweave{background:var(--btn-bg);color:#fff;border:none}
+
+/* Mode Banner */
+#modeBanner{background:#FEF3C7;color:#92400E;font-size:11px;font-weight:500;padding:5px 14px;text-align:center;border-bottom:1px solid #FDE68A;flex-shrink:0;display:none}
+#modeBanner code{background:rgba(0,0,0,.08);padding:1px 4px;border-radius:3px}
+
+/* Form Panel */
+#formPanel{background:var(--surface);border-bottom:1px solid var(--border);padding:0 18px;overflow:hidden;max-height:0;opacity:0;transition:max-height .32s ease,opacity .22s ease,padding .32s ease;flex-shrink:0}
+#formPanel.open{max-height:300px;opacity:1;padding:14px 18px}
+.form-title{font-family:'Playfair Display',serif;font-size:14px;color:var(--navy);margin-bottom:10px;font-weight:700}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:8px;align-items:end}
+.field{display:flex;flex-direction:column;gap:3px}
+.field label{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+.field input,.field select{height:32px;padding:0 9px;border:1px solid var(--border);border-radius:7px;font-family:'DM Sans',sans-serif;font-size:12px;color:var(--text);background:var(--bg);outline:none;transition:border-color .14s}
+.field input:focus,.field select:focus{border-color:var(--male);box-shadow:0 0 0 2px rgba(45,125,94,.15)}
+.form-footer{display:flex;gap:8px;align-items:center;margin-top:10px}
+#formStatus{font-size:11px}
+#formStatus.ok{color:var(--root-c)}
+#formStatus.err{color:var(--navy)}
+
+/* Main */
+.main{flex:1;display:flex;overflow:hidden}
+
+/* Tree viewport */
+#treeViewport{flex:1;overflow:auto;position:relative;background:var(--bg)}
+#treeCanvas{position:relative;min-width:100%;min-height:100%}
+#linesSVG{position:absolute;top:0;left:0;pointer-events:none;overflow:visible}
+
+/* Person Card */
+.p-card{
+  position:absolute;
+  width:var(--cw);
+  height:var(--ch);
+  background:var(--surface);
+  border-radius:10px;
+  box-shadow:var(--shadow);
+  border:1.5px solid var(--border);
+  border-top:4px solid var(--male);
+  padding:10px 11px 8px;
+  display:flex;flex-direction:column;
+  transition:box-shadow .18s,transform .18s;
+  user-select:none;
+}
+.p-card:hover{box-shadow:var(--shadow-lg);transform:translateY(-2px)}
+.p-card.female{border-top-color:var(--female)}
+.p-card.root{border-top-color:var(--gold);box-shadow:0 2px 14px rgba(192,125,43,.2)}
+
+.card-role{font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;opacity:.5;margin-bottom:2px}
+.p-card.male  .card-role{color:var(--male)}
+.p-card.female .card-role{color:var(--female)}
+.p-card.root   .card-role{color:var(--gold)}
+
+.card-name{font-family:'Playfair Display',serif;font-size:13px;font-weight:700;line-height:1.22;color:var(--navy);flex:1;word-break:break-word;overflow:hidden}
+.card-dates{font-size:9.5px;color:var(--muted);margin-top:4px}
+.card-place{font-size:9px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card-footer{display:flex;align-items:center;justify-content:space-between;margin-top:5px;padding-top:4px;border-top:1px solid var(--border)}
+.card-actions{display:flex;gap:4px;align-items:center}
+.card-add-parent{border:none;background:var(--bg);color:var(--muted);font-size:8px;padding:2px 6px;border-radius:999px;cursor:pointer;white-space:nowrap}
+.card-add-parent:hover{background:#E5E3DC;color:var(--navy)}
+.card-actions{display:flex;gap:4px;align-items:center}
+.card-add-parent{border:none;background:var(--bg);color:var(--muted);font-size:8px;padding:2px 6px;border-radius:999px;cursor:pointer;white-space:nowrap}
+.card-add-parent:hover{background:#E5E3DC;color:var(--navy)}
+.badge-v{display:inline-flex;align-items:center;gap:2px;font-size:8px;font-weight:600;color:var(--root-c);background:var(--root-lt);padding:2px 5px;border-radius:20px;cursor:pointer}
+.badge-v::before{content:"✓";font-weight:800}
+.card-del{width:17px;height:17px;border:none;background:transparent;color:var(--muted);cursor:pointer;border-radius:3px;font-size:11px;display:flex;align-items:center;justify-content:center;opacity:.4;transition:opacity .13s,color .13s;flex-shrink:0}
+.card-del:hover{opacity:1;color:var(--navy)}
+
+/* Gen label row */
+.gen-label{position:absolute;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--muted);opacity:.38;pointer-events:none;user-select:none;white-space:nowrap}
+
+/* Empty state */
+#emptyState{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;gap:9px}
+.ei{font-size:50px;opacity:.18}
+.et{font-family:'Playfair Display',serif;font-size:19px;color:var(--navy);opacity:.2}
+.es{font-size:12px;color:var(--muted);opacity:.5}
+
+/* Legend */
+.legend{position:fixed;bottom:12px;left:12px;background:rgba(255,255,255,.92);backdrop-filter:blur(8px);border:1px solid var(--border);border-radius:9px;padding:7px 12px;font-size:10px;display:flex;gap:11px;pointer-events:none;box-shadow:var(--shadow);z-index:50}
+.legend-item{display:flex;align-items:center;gap:4px;color:var(--muted)}
+.legend-sw{width:10px;height:4px;border-radius:2px;flex-shrink:0}
+
+/* Sidebar */
+#sidebar{width:256px;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0}
+.sb-header{padding:11px 13px 9px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.sb-title{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted)}
+#arweaveInfo{font-size:9px;color:var(--gold);font-family:'DM Mono',monospace;padding:6px 13px;border-bottom:1px solid var(--border);display:none;gap:4px;align-items:center;overflow:hidden}
+#arweaveInfo.visible{display:flex}
+#arweaveInfo a{color:var(--gold);text-decoration:underline;word-break:break-all}
+#commitList{flex:1;overflow-y:auto}
+.ci{padding:7px 13px;border-bottom:1px solid var(--bg);display:flex;gap:8px;align-items:flex-start;cursor:pointer}
+.ci:hover{background:var(--bg)}
+.cdot{width:6px;height:6px;border-radius:50%;margin-top:4px;flex-shrink:0}
+.cdot.ADD{background:var(--root-c)}.cdot.DELETE{background:var(--muted)}.cdot.SNAPSHOT{background:var(--gold)}
+.ct{flex:1;min-width:0}
+.ca{font-size:9px;font-weight:700;text-transform:uppercase;color:var(--muted)}
+.cd{font-size:11px;color:var(--navy);word-break:break-word}
+.ch{font-family:'DM Mono',monospace;font-size:8.5px;color:var(--muted);opacity:.5;margin-top:1px}
+
+/* Toast */
+#toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%) translateY(60px);background:var(--navy);color:#fff;padding:8px 16px;border-radius:40px;font-size:12px;font-weight:500;pointer-events:none;transition:transform .28s cubic-bezier(.34,1.56,.64,1),opacity .2s;opacity:0;z-index:9999;box-shadow:var(--shadow-lg);white-space:nowrap}
+#toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+
+/* Modal */
+#modal{position:fixed;inset:0;background:rgba(27,77,62,.4);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;z-index:999;opacity:0;pointer-events:none;transition:opacity .18s}
+#modal.open{opacity:1;pointer-events:all}
+.modal-box{background:var(--surface);border-radius:13px;padding:22px 26px;max-width:430px;width:90%;box-shadow:var(--shadow-lg);transform:scale(.95);transition:transform .2s cubic-bezier(.34,1.56,.64,1)}
+#modal.open .modal-box{transform:scale(1)}
+.modal-title{font-family:'Playfair Display',serif;font-size:16px;color:var(--navy);margin-bottom:13px;font-weight:700}
+.mr{display:flex;gap:9px;margin-bottom:8px;align-items:flex-start}
+.ml{font-size:9px;font-weight:700;text-transform:uppercase;color:var(--muted);width:72px;flex-shrink:0;padding-top:2px}
+.mv{font-family:'DM Mono',monospace;font-size:10px;color:var(--navy);word-break:break-all}
+
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:10px}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Sejire<span>Генеалогическое Древо</span></div>
+  <div class="spacer"></div>
+  <button class="btn" onclick="exportJSON()">Экспорт JSON</button>
+  <button class="btn" onclick="exportSVG()" title="Вектор: открыть в браузере или Illustrator">SVG</button>
+  <button class="btn" onclick="exportPNG()" title="Растр PNG">PNG</button>
+  <button class="btn" onclick="exportPDFPrint()" title="Откроется печать Safari → «Сохранить как PDF»">PDF</button>
+  <button class="btn" onclick="triggerImport()">Импорт</button>
+  <input id="importFile" type="file" accept="application/json" style="display:none" onchange="handleImportFile(event)">
+  <button class="btn btn-primary" onclick="toggleForm()">Добавить</button>
+  <button class="btn btn-arweave" onclick="createSnapshot()">Snapshot</button>
+  <button class="btn btn-danger" onclick="clearDatabase()">Очистить</button>
+</header>
+
+<div id="modeBanner">⚡ <strong>Автономный режим</strong> — данные сохранены в сессии. Для JSON-файла запустите <code>go run .</code> (или <code>go run main.go</code>).</div>
+
+<div id="formPanel">
+  <div class="form-title" id="formTitle">Добавить человека в древо</div>
+  <div class="form-grid">
+    <div class="field" style="grid-column:span 2">
+      <label>Полное имя *</label>
+      <input id="f-name" type="text" placeholder="Фамилия Имя Отчество" autocomplete="off">
+    </div>
+    <div class="field">
+      <label>Пол</label>
+      <select id="f-sex"><option value="M">♂ Мужчина</option><option value="F">♀ Женщина</option></select>
+    </div>
+    <div class="field">
+      <label>Роль / Поколение</label>
+      <select id="f-role">
+        <option value="Корень">🌱 Корень</option>
+        <option value="Отец">Отец</option><option value="Мать">Мать</option>
+        <option value="Дед">Дед</option><option value="Бабушка">Бабушка</option>
+        <option value="Прадед">Прадед</option><option value="Прабабушка">Прабабушка</option>
+        <option value="Прапрадед">Прапрадед</option><option value="Прапрабабушка">Прапрабабушка</option>
+        <option value="5-е колено">5-е колено</option>
+        <option value="6-е колено">6-е колено</option>
+        <option value="7-е колено">7-е колено</option>
+        <option value="Дальний предок">Дальний предок (8+)</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Дата рождения</label>
+      <input id="f-birth" type="text" placeholder="дд.мм.гггг или гггг" autocomplete="off">
+      <span style="font-size:9px;color:var(--muted);margin-top:2px">Можно указать только год или полный формат даты</span>
+    </div>
+    <div class="field">
+      <label>Дата смерти</label>
+      <input id="f-death" type="text" placeholder="дд.мм.гггг или гггг" autocomplete="off">
+      <span style="font-size:9px;color:var(--muted);margin-top:2px">Если дата неизвестна — оставьте поле пустым</span>
+    </div>
+    <div class="field"><label>Место рождения</label><input id="f-place" type="text" placeholder="Москва, Россия"></div>
+    <div class="field"><label>Место захоронения</label><input id="f-deathplace" type="text" placeholder="Город, кладбище"></div>
+    <div class="field">
+      <label>Чьим предком является?</label>
+      <select id="f-target"><option value="">— Нет (корень) —</option></select>
+    </div>
+  </div>
+  <div class="form-footer">
+    <button class="btn btn-primary" id="formSave" onclick="submitPerson()">Сохранить</button>
+    <button class="btn" style="background:var(--border);color:var(--navy)" onclick="toggleForm()">Отмена</button>
+    <span id="formStatus"></span>
+  </div>
+</div>
+
+<div class="main">
+  <div id="treeViewport">
+    <div id="treeCanvas">
+      <svg id="linesSVG"></svg>
+      <div id="emptyState">
+        <div class="ei">🌳</div>
+        <div class="et">Дерево пусто</div>
+        <div class="es">Нажмите «＋ Добавить» чтобы начать</div>
+      </div>
+    </div>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-sw" style="background:var(--male)"></div>Отец / Дед</div>
+      <div class="legend-item"><div class="legend-sw" style="background:var(--female)"></div>Мать / Бабушка</div>
+      <div class="legend-item"><div class="legend-sw" style="background:var(--gold)"></div>Корень</div>
+    </div>
+  </div>
+  <div id="sidebar">
+    <div class="sb-header">
+      <span class="sb-title">📜 История изменений</span>
+      <span id="commitCount" style="font-size:10px;color:var(--muted)">0 commits</span>
+    </div>
+    <div id="arweaveInfo"><span>🗄</span><a id="arweaveLink" href="#" target="_blank"></a></div>
+    <div id="commitList"><div style="padding:16px 13px;text-align:center;color:var(--muted);font-size:11px">Нет записей</div></div>
+  </div>
+</div>
+
+<div id="modal" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal-box">
+    <div class="modal-title">🔐 Blockchain Commit</div>
+    <div class="mr"><span class="ml">SHA-256</span><span class="mv" id="m-hash"></span></div>
+    <div class="mr"><span class="ml">Действие</span><span class="mv" id="m-action"></span></div>
+    <div class="mr"><span class="ml">Объект</span><span class="mv" id="m-details"></span></div>
+    <div class="mr"><span class="ml">Время</span><span class="mv" id="m-time"></span></div>
+    <div class="mr"><span class="ml">ID</span><span class="mv" id="m-pid"></span></div>
+    <div class="mr" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
+      <span class="ml" style="color:var(--gold)">Polygon</span>
+      <span class="mv" style="color:var(--muted);font-size:9px">Stub: подключите Polygon SDK для записи хэша в блокчейн.</span>
+    </div>
+    <div style="margin-top:13px">
+      <button class="btn btn-primary" onclick="document.getElementById('modal').classList.remove('open')">Закрыть</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+'use strict';
+
+function makeExportCanvas(source, maxSide){
+  const w = source && source.width ? source.width : 0;
+  const h = source && source.height ? source.height : 0;
+  const max = Math.max(w, h);
+  if (!w || !h || !max) throw new Error('Пустой снимок дерева (0×0)');
+  const scale = maxSide && max > maxSide ? (maxSide / max) : 1;
+  const cw = Math.max(1, Math.round(w * scale));
+  const ch = Math.max(1, Math.round(h * scale));
+  const canvas = document.createElement('canvas');
+  canvas.width = cw;
+  canvas.height = ch;
+  const ctx = canvas.getContext('2d');
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(source, 0, 0, cw, ch);
+  return canvas;
+}
+
+// ─── Layout constants ──────────────────────────────────────────
+const CW    = 176;   // card width
+const CH    = 140;   // card height (увеличено, чтобы не срезать отчество)
+const GAP_X = 32;    // horizontal gap between sibling subtrees
+const GAP_Y = 84;    // vertical gap between generations
+const PAD   = 60;    // canvas padding
+
+// ─── State ────────────────────────────────────────────────────
+let state = { persons: [], commits: [], arweaveHash: '' };
+let serverMode = false;
+let formMode = 'add';      // 'add' | 'edit'
+let editingId = null;      // ID редактируемого человека
+
+// ─── Utils ───────────────────────────────────────────────────
+async function sha256(str) {
+  try {
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+    return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+  } catch(e) {
+    let h = 2166136261;
+    for (let i=0;i<str.length;i++) h = Math.imul(h^str.charCodeAt(i),16777619)>>>0;
+    return h.toString(16).padStart(8,'0')+Date.now().toString(16)+Math.random().toString(16).slice(2,18);
+  }
+}
+function genID(){ return 'INDI_'+Date.now()+String(Math.floor(Math.random()*9999)).padStart(4,'0'); }
+function fmtName(s){ return s.trim().split(/\s+/).map(w=>w?w[0].toUpperCase()+w.slice(1).toLowerCase():'').join(' '); }
+async function mkCommit(action,pid,details){
+  const hash = await sha256(action+'|'+pid+'|'+details+'|'+Date.now()+Math.random());
+  return {Hash:hash,Timestamp:new Date().toISOString(),Action:action,PersonID:pid,Details:details};
+}
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+
+function displayDate(raw){
+  if(!raw) return '';
+  if(/^\d{4}$/.test(raw)) return raw;
+  if(/^\d{4}-\d{2}$/.test(raw)){
+    const [y,m]=raw.split('-');
+    return m+'.'+y;
+  }
+  if(/^\d{4}-\d{2}-\d{2}$/.test(raw)){
+    const [y,m,d]=raw.split('-');
+    return d+'.'+m+'.'+y;
+  }
+  return String(raw).replace(/-/g,'.');
+}
+
+// ─── Persistence ─────────────────────────────────────────────
+const STORAGE_KEY = 'sejire-v3';
+async function persist(){
+  const raw = JSON.stringify(state);
+  try{
+    if(window.storage && typeof window.storage.set === 'function'){
+      await window.storage.set(STORAGE_KEY, raw);
+      return;
+    }
+  }catch(e){}
+  try{ localStorage.setItem(STORAGE_KEY, raw); }catch(e){}
+}
+async function loadStorage(){
+  try{
+    if(window.storage && typeof window.storage.get === 'function'){
+      const r = await window.storage.get(STORAGE_KEY);
+      if(r && r.value){
+        const d = JSON.parse(r.value);
+        state = { persons: d.persons||[], commits: d.commits||[], arweaveHash: d.arweaveHash||'' };
+        return;
+      }
+    }
+  }catch(e){}
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw){
+      const d = JSON.parse(raw);
+      state = { persons: d.persons||[], commits: d.commits||[], arweaveHash: d.arweaveHash||'' };
+    }
+  }catch(e){}
+}
+async function tryServer(){
+  try{
+    const ctrl=new AbortController(); setTimeout(()=>ctrl.abort(),2000);
+    const r=await fetch('/api/persons?_='+Date.now(),{signal:ctrl.signal});
+    if(!r.ok) return false;
+    const db=await r.json();
+    state={persons:db.persons||[],commits:db.commits||[],arweaveHash:db.arweaveHash||''};
+    return true;
+  }catch(e){return false;}
+}
+async function init(){
+  serverMode=await tryServer();
+  if(!serverMode){ await loadStorage(); document.getElementById('modeBanner').style.display='block'; }
+  render();
+}
+
+// ─── Form ────────────────────────────────────────────────────
+function openForm(mode, opts={}){
+  formMode = mode || 'add';
+  editingId = opts.id || null;
+  const p=document.getElementById('formPanel');
+  p.classList.add('open');
+  const title = document.getElementById('formTitle');
+  const save  = document.getElementById('formSave');
+  if(formMode==='edit'){
+    if(title) title.textContent='Редактировать человека';
+    if(save)  save.textContent='Сохранить изменения';
+  }else{
+    if(title) title.textContent='Добавить человека в древо';
+    if(save)  save.textContent='Сохранить';
+    // при добавлении очищаем поля
+    ['f-name','f-birth','f-death','f-place','f-deathplace'].forEach(id=>{
+      const el=document.getElementById(id); if(el) el.value='';
+    });
+    document.getElementById('f-target').value = opts.targetId || '';
+    document.getElementById('f-sex').value = opts.sex || 'M';
+    if(opts.role) document.getElementById('f-role').value = opts.role;
+  }
+  refreshDrop();
+  setStatus('',false);
+  setTimeout(()=>{ const el=document.getElementById('f-name'); if(el) el.focus(); },150);
+}
+function toggleForm(){
+  const p=document.getElementById('formPanel');
+  if(p.classList.contains('open')){
+    p.classList.remove('open');
+    formMode='add'; editingId=null;
+    setStatus('',false);
+  }else{
+    openForm('add',{});
+  }
+}
+function refreshDrop(){
+  const sel=document.getElementById('f-target'),cur=sel.value;
+  sel.innerHTML='<option value="">— Нет (корень) —</option>';
+  state.persons.forEach(p=>{
+    if(formMode==='edit' && editingId===p.ID) return;
+    const o=document.createElement('option');
+    o.value=p.ID; o.textContent=p.FullName+' ('+p.Role+')';
+    if(p.ID===cur)o.selected=true;
+    sel.appendChild(o);
+  });
+}
+function setStatus(msg,isErr=false){ const el=document.getElementById('formStatus'); el.textContent=msg; el.className=isErr?'err':'ok'; }
+
+async function submitPerson(){
+  const rawName=document.getElementById('f-name').value.trim();
+  if(!rawName){ setStatus('Введите полное имя',true); return; }
+  setStatus('Сохранение…');
+  const baseData={
+    FullName:fmtName(rawName),
+    Sex:document.getElementById('f-sex').value,
+    Role:document.getElementById('f-role').value,
+    BirthDate:document.getElementById('f-birth').value.trim(),
+    DeathDate:document.getElementById('f-death').value.trim(),
+    BirthPlace:document.getElementById('f-place').value.trim(),
+    DeathPlace:document.getElementById('f-deathplace').value.trim(),
+    TargetID:document.getElementById('f-target').value,
+  };
+
+  if(formMode==='edit' && editingId){
+    const idx = state.persons.findIndex(p=>p.ID===editingId);
+    if(idx===-1){
+      formMode='add'; editingId=null;
+    }else{
+      const old = state.persons[idx];
+      const updated = Object.assign({}, old, baseData);
+      updated.ID = editingId;
+      if(serverMode){
+        try{
+          const ctrl=new AbortController(); setTimeout(()=>ctrl.abort(),3000);
+          const r=await fetch('/api/persons/'+editingId+'?_='+Date.now(),{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(updated),signal:ctrl.signal});
+          if(r.ok){
+            const resp=await r.json();
+            state.persons[idx]=resp.person;
+            if(resp.commit) state.commits.unshift(resp.commit);
+            await persist();
+            done(updated.FullName);
+            const panel=document.getElementById('formPanel');
+            if(panel) panel.classList.remove('open');
+            formMode='add'; editingId=null;
+            return;
+          }
+          const errText = await r.text();
+          setStatus(errText || 'Ошибка сохранения', true);
+          return;
+        }catch(e){ setStatus('Ошибка сети',true); return; }
+      }
+      state.persons[idx]=updated;
+      const commit=await mkCommit('UPDATE',editingId,updated.FullName+' ('+updated.Role+')');
+      state.commits.unshift(commit);
+      await persist();
+      done(updated.FullName);
+      const panel=document.getElementById('formPanel');
+      if(panel) panel.classList.remove('open');
+      formMode='add'; editingId=null;
+      return;
+    }
+  }
+
+  const pd = Object.assign({}, baseData);
+  if(serverMode){
+    try{
+      const ctrl=new AbortController(); setTimeout(()=>ctrl.abort(),3000);
+      const r=await fetch('/api/persons?_='+Date.now(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(pd),signal:ctrl.signal});
+      if(r.ok){ const resp=await r.json(); state.persons.push(resp.person); state.commits.unshift(resp.commit); done(resp.person.FullName); return; }
+      const errText = await r.text();
+      setStatus(errText || 'Ошибка сохранения', true);
+      return;
+    }catch(e){}
+  }
+  pd.ID=genID();
+  const commit=await mkCommit('ADD',pd.ID,pd.FullName+' ('+pd.Role+')');
+  state.persons.push(pd); state.commits.unshift(commit);
+  await persist(); done(pd.FullName);
+}
+function done(name){
+  ['f-name','f-birth','f-death','f-place','f-deathplace'].forEach(id=>{const el=document.getElementById(id); if(el) el.value='';});
+  document.getElementById('f-target').value='';
+  setStatus('Сохранено: '+name);
+  render();
+  toast('Сохранено: '+name);
+}
+async function deletePerson(id,name){
+  if(!confirm('Удалить «'+name+'»?')) return;
+  if(serverMode) try{await fetch('/api/persons/'+id+'?_='+Date.now(),{method:'DELETE'});}catch(e){}
+  state.persons=state.persons.filter(p=>p.ID!==id);
+  const c=await mkCommit('DELETE',id,name); state.commits.unshift(c);
+  await persist(); render(); toast('Удалён: '+name);
+}
+async function clearDatabase(){
+  if(!confirm('Удалить всё дерево?')) return;
+  if(serverMode) try{await fetch('/api/database?_='+Date.now(),{method:'DELETE'});}catch(e){}
+  state={persons:[],commits:[],arweaveHash:''};
+  try{ if(window.storage && typeof window.storage.delete === 'function') await window.storage.delete(STORAGE_KEY); }catch(e){}
+  try{ localStorage.removeItem(STORAGE_KEY); }catch(e){}
+  render(); toast('База данных очищена');
+}
+async function createSnapshot(){
+  try {
+    toast('Создаю снимок…');
+    if (serverMode) {
+      try{
+        const ctrl=new AbortController(); setTimeout(()=>ctrl.abort(),4000);
+        const r=await fetch('/api/snapshot?_='+Date.now(),{method:'POST',signal:ctrl.signal});
+        if(r.ok){
+          const resp=await r.json();
+          state.arweaveHash=resp.arweaveHash||'';
+          if(resp.commit){ state.commits.unshift(resp.commit); }
+          await persist();
+          renderSidebar();
+          toast('Snapshot создан: '+String(state.arweaveHash).slice(0,20)+'…');
+          return;
+        }
+      }catch(e){ /* fallback to client */ }
+    }
+    // Fallback: клиентский снимок (офлайн или сервер недоступен)
+    const hash=await sha256(JSON.stringify(state.persons)+Date.now());
+    const txID='ar_'+hash.slice(0,32);
+    state.arweaveHash=txID;
+    const c=await mkCommit('SNAPSHOT','system','Arweave TX: '+txID);
+    state.commits.unshift(c);
+    await persist();
+    renderSidebar();
+    toast('Snapshot создан: '+txID.slice(0,20)+'…');
+  } catch(e) {
+    console.error(e);
+    toast('Ошибка создания снимка. Попробуйте ещё раз.');
+  }
+}
+
+function addParentFromCard(childId, sex){
+  const child = state.persons.find(p=>p.ID===childId);
+  const role = sex==='M' ? 'Отец' : 'Мать';
+  openForm('add',{ targetId: childId, sex, role });
+}
+
+function openEditPerson(id){
+  const person = state.persons.find(p=>p.ID===id);
+  if(!person) return;
+  editingId = id;
+  formMode = 'edit';
+  const pEl = document.getElementById('formPanel');
+  if(pEl) pEl.classList.add('open');
+  const title = document.getElementById('formTitle');
+  const save  = document.getElementById('formSave');
+  if(title) title.textContent='Редактировать человека';
+  if(save)  save.textContent='Сохранить изменения';
+
+  document.getElementById('f-name').value = person.FullName || '';
+  document.getElementById('f-sex').value  = person.Sex || 'M';
+  if(person.Role) document.getElementById('f-role').value = person.Role;
+  document.getElementById('f-place').value = person.BirthPlace || '';
+  document.getElementById('f-deathplace').value = person.DeathPlace || '';
+  document.getElementById('f-target').value = person.TargetID || '';
+  document.getElementById('f-birth').value = person.BirthDate || '';
+  document.getElementById('f-death').value = person.DeathDate || '';
+  refreshDrop();
+  setStatus('',false);
+  setTimeout(()=>{ const el=document.getElementById('f-name'); if(el) el.focus(); },150);
+}
+
+// ─────────────────────────────────────────────────────────────
+//  LAYOUT ENGINE — Vertical tree growing UPWARD
+//
+//  Visual structure:
+//
+//     [Дед] [Баб]   [Дед] [Баб]
+//        \  /           \  /
+//       [Отец]         [Мать]
+//           \          /
+//              [Корень]
+//
+//  Rules:
+//  • Root (gen=0) at the BOTTOM
+//  • Parents (gen=1) above, Father LEFT, Mother RIGHT
+//  • Grandparents (gen=2) above parents
+//  • X is computed from subtree widths, so parents are centered over their children
+//  • Connectors are ORTHOGONAL BRACKETS (no diagonals):
+//    - vertical line up from child top-center
+//    - horizontal bar connecting to each parent's bottom-center
+//    - vertical lines down from each parent's bottom-center to the bar
+// ─────────────────────────────────────────────────────────────
+
+function buildLayout(persons) {
+  if (!persons.length) return { positions:{}, canvasW:900, canvasH:600 };
+
+  const byId = {};
+  persons.forEach(p => byId[p.ID] = p);
+
+  // parentsOf[childID] = list of persons whose TargetID === childID
+  const parentsOf = {};
+  persons.forEach(p => {
+    if (p.TargetID && byId[p.TargetID])
+      (parentsOf[p.TargetID] = parentsOf[p.TargetID] || []).push(p);
+  });
+
+  // Sort parents per child: Male (father) always LEFT, Female (mother) always RIGHT
+  Object.keys(parentsOf).forEach(childID => {
+    parentsOf[childID].sort((a, b) => {
+      if (a.Sex === 'M' && b.Sex !== 'M') return -1;
+      if (a.Sex !== 'M' && b.Sex === 'M') return  1;
+      return 0;
+    });
+  });
+
+  // Assign generations (0 = roots at bottom, higher = further up)
+  const gen = {};
+  const roots = persons.filter(p => !p.TargetID || !byId[p.TargetID]);
+  const queue = [...roots];
+  roots.forEach(p => gen[p.ID] = 0);
+  let qi = 0;
+  while (qi < queue.length) {
+    const curr = queue[qi++];
+    (parentsOf[curr.ID] || []).forEach(parent => {
+      if (gen[parent.ID] === undefined) {
+        gen[parent.ID] = gen[curr.ID] + 1;
+        queue.push(parent);
+      }
+    });
+  }
+  // Any orphaned persons default to gen 0
+  persons.forEach(p => { if (gen[p.ID] === undefined) gen[p.ID] = 0; });
+
+  const maxGen = Math.max(0, ...Object.values(gen));
+
+  // ── Compute subtree width (recursive) ──
+  // A leaf person needs exactly CW pixels.
+  // A person with parents needs the sum of their parents' subtree widths + gaps.
+  function subtreeWidth(p) {
+    const parents = parentsOf[p.ID] || [];
+    if (!parents.length) return CW;
+    const total = parents.reduce((s, par) => s + subtreeWidth(par), 0);
+    const gaps  = (parents.length - 1) * GAP_X;
+    return Math.max(CW, total + gaps);
+  }
+
+  // ── Assign X positions (recursive, parent centered over child) ──
+  const xCenter = {}; // person ID → center X of the person's card
+
+  function assignX(p, cx) {
+    xCenter[p.ID] = cx;
+    const parents = parentsOf[p.ID] || [];
+    if (!parents.length) return;
+
+    const widths = parents.map(par => subtreeWidth(par));
+    const totalW = widths.reduce((s, w) => s + w, 0) + (parents.length - 1) * GAP_X;
+
+    let curX = cx - totalW / 2;
+    parents.forEach((par, i) => {
+      // Place this parent's subtree starting at curX
+      // The center of this parent is at curX + widths[i]/2
+      assignX(par, curX + widths[i] / 2);
+      curX += widths[i] + GAP_X;
+    });
+  }
+
+  // Lay out each root, spaced by their subtree widths
+  let curX = PAD;
+  roots.forEach(root => {
+    const w = subtreeWidth(root);
+    assignX(root, curX + w / 2);
+    curX += w + GAP_X * 2;
+  });
+
+  // ── Assign Y positions ──
+  // Gen 0 (roots) at bottom, each generation step is (CH + GAP_Y) higher
+  const canvasH = PAD + (maxGen + 1) * (CH + GAP_Y) + PAD;
+  const yOf = p => canvasH - PAD - gen[p.ID] * (CH + GAP_Y) - CH;
+
+  // ── Build positions map ──
+  const positions = {};
+  persons.forEach(p => {
+    positions[p.ID] = {
+      x: Math.round((xCenter[p.ID] || PAD + CW/2) - CW/2),
+      y: Math.round(yOf(p)),
+      gen: gen[p.ID]
+    };
+  });
+
+  const allX = Object.values(positions).map(p => p.x);
+  const canvasW = Math.max(900, Math.max(...allX) + CW + PAD);
+
+  return { positions, canvasW, canvasH, maxGen, parentsOf, gen };
+}
+
+// ─── Render ───────────────────────────────────────────────────
+function render() { renderTree(); renderSidebar(); refreshDrop(); }
+
+function renderTree() {
+  const canvas = document.getElementById('treeCanvas');
+  const empty  = document.getElementById('emptyState');
+  const svg    = document.getElementById('linesSVG');
+
+  canvas.querySelectorAll('.p-card, .gen-label').forEach(e => e.remove());
+  svg.innerHTML = '';
+
+  if (!state.persons.length) {
+    empty.style.display = 'flex';
+    canvas.style.width  = '100%';
+    canvas.style.height = '100%';
+    return;
+  }
+  empty.style.display = 'none';
+
+  const { positions, canvasW, canvasH, maxGen, parentsOf, gen } = buildLayout(state.persons);
+
+  canvas.style.width  = canvasW + 'px';
+  canvas.style.height = canvasH + 'px';
+  svg.setAttribute('width',   canvasW);
+  svg.setAttribute('height',  canvasH);
+  svg.setAttribute('viewBox', '0 0 '+canvasW+' '+canvasH);
+
+  const byId = {};
+  state.persons.forEach(p => byId[p.ID] = p);
+
+  // ── Draw generation labels on the left edge ──
+  const genNames = [
+    'Я / Корень',
+    'Родители',
+    'Дедушки / Бабушки',
+    'Прадедушки / Прабабушки',
+    'Прапрадедушки / Прапрабабушки (4-е колено)',
+    '5-е колено',
+    '6-е колено',
+    '7-е колено',
+    'Дальние предки'
+  ];
+  for (let g = 0; g <= maxGen; g++) {
+    // Find any person in this gen to get Y
+    const sample = state.persons.find(p => gen[p.ID] === g);
+    if (!sample || !positions[sample.ID]) continue;
+    const posY = positions[sample.ID].y + CH / 2 - 5;
+    const lbl = document.createElement('div');
+    lbl.className = 'gen-label';
+    lbl.style.left = '8px';
+    lbl.style.top  = posY + 'px';
+    lbl.textContent = genNames[g] || ('Поколение ' + (g + 1));
+    canvas.appendChild(lbl);
+  }
+
+  // ── Draw bracket connectors (orthogonal, upward) ──
+  //
+  //  The bracket for each child→parents group looks like:
+  //
+  //   bottom of Father   bottom of Mother
+  //        |                  |
+  //        +──────────────────+    ← horizontal bar at barY
+  //                  |
+  //             top of Child
+  //
+  //  barY = midpoint between child.top and parents.bottom
+
+  state.persons.forEach(child => {
+    const parents = parentsOf[child.ID] || [];
+    if (!parents.length) return;
+
+    const childPos = positions[child.ID];
+    if (!childPos) return;
+
+    // Child's top-center
+    const childCx = childPos.x + CW / 2;
+    const childTop = childPos.y;
+
+    parents.forEach(par => {
+      const pp = positions[par.ID];
+      if (!pp) return;
+      const parentCx = pp.x + CW / 2;
+      const parentBottom = pp.y + CH;
+
+      // Control points: start going slightly up, end coming slightly down
+      const midY = (childTop + parentBottom) / 2;
+      const c1x = childCx;
+      const c1y = childTop - Math.abs(midY - childTop) * 0.3;
+      const c2x = parentCx;
+      const c2y = parentBottom + Math.abs(parentBottom - midY) * 0.3;
+
+      bezier(svg, childCx, childTop, c1x, c1y, c2x, c2y, parentCx, parentBottom, '#B0A9A0', '1.6');
+      dot(svg, childCx, childTop, '#C9C3BA', 3);
+      dot(svg, parentCx, parentBottom, '#C9C3BA', 3);
+    });
+  });
+
+  // ── Draw person cards ──
+  state.persons.forEach(p => {
+    const pos = positions[p.ID];
+    if (!pos) return;
+
+    const isRoot = p.Role === 'Корень';
+    const isFem  = p.Sex  === 'F';
+    const cls    = isRoot ? 'root' : (isFem ? 'female' : 'male');
+
+    const commit     = state.commits.find(c => c.PersonID === p.ID && c.Action === 'ADD');
+    const hashShort  = commit ? commit.Hash.slice(0, 8) : null;
+    const b          = displayDate(p.BirthDate || '');
+    const d          = displayDate(p.DeathDate || '');
+    const dates      = (b || d) ? (b || '?') + (d ? ' – ' + d : '') : '';
+
+    const card = document.createElement('div');
+    card.className = 'p-card ' + cls;
+    card.style.left = pos.x + 'px';
+    card.style.top  = pos.y + 'px';
+    const actionsHtml = '';
+    card.innerHTML =
+      '<div class="card-role">' + esc(p.Role) + ' ' + (p.Sex === 'M' ? '♂' : '♀') + '</div>' +
+      '<div class="card-name">' + esc(p.FullName) + '</div>' +
+      (dates     ? '<div class="card-dates">' + esc(dates) + '</div>' : '') +
+      (p.BirthPlace ? '<div class="card-place">Рожд.: ' + esc(p.BirthPlace) + '</div>' : '') +
+      (p.DeathPlace ? '<div class="card-place card-deathplace">Захор.: ' + esc(p.DeathPlace) + '</div>' : '') +
+      '<div class="card-footer">' +
+        '<div class="card-actions">' +
+          (hashShort
+            ? '<span class="badge-v" onclick="event.stopPropagation(); showCommit(\'' + commit.Hash + '\')" title="SHA-256">Verified · ' + hashShort + '</span>'
+            : '') +
+          actionsHtml +
+        '</div>' +
+        '<button class="card-del" onclick="event.stopPropagation(); deletePerson(\'' + esc(p.ID) + '\',\'' + esc(p.FullName) + '\')" title="Удалить">✕</button>' +
+      '</div>';
+    card.addEventListener('click', () => openEditPerson(p.ID));
+    canvas.appendChild(card);
+  });
+}
+
+function line(svg, x1, y1, x2, y2, color, w) {
+  const l = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+  l.setAttribute('x1', x1); l.setAttribute('y1', y1);
+  l.setAttribute('x2', x2); l.setAttribute('y2', y2);
+  l.setAttribute('stroke', color); l.setAttribute('stroke-width', w);
+  l.setAttribute('stroke-linecap', 'round');
+  svg.appendChild(l);
+}
+function dot(svg, cx, cy, fill, r) {
+  const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+  c.setAttribute('cx', cx); c.setAttribute('cy', cy);
+  c.setAttribute('r', r); c.setAttribute('fill', fill);
+  svg.appendChild(c);
+}
+function bezier(svg,x1,y1,c1x,c1y,c2x,c2y,x2,y2,color,w){
+  const p=document.createElementNS('http://www.w3.org/2000/svg','path');
+  p.setAttribute('d',`M ${x1} ${y1} C ${c1x} ${c1y}, ${c2x} ${c2y}, ${x2} ${y2}`);
+  p.setAttribute('fill','none');
+  p.setAttribute('stroke',color);
+  p.setAttribute('stroke-width',w);
+  p.setAttribute('stroke-linecap','round');
+  svg.appendChild(p);
+}
+
+// ─── Sidebar ─────────────────────────────────────────────────
+function renderSidebar() {
+  document.getElementById('commitCount').textContent = state.commits.length + ' commits';
+  const ai = document.getElementById('arweaveInfo');
+  if (state.arweaveHash) {
+    ai.classList.add('visible');
+    const al = document.getElementById('arweaveLink');
+    al.href = 'https://viewblock.io/arweave/tx/' + state.arweaveHash;
+    al.textContent = state.arweaveHash.slice(0,22) + '…';
+  } else ai.classList.remove('visible');
+
+  const list = document.getElementById('commitList');
+  if (!state.commits.length) {
+    list.innerHTML = '<div style="padding:16px 13px;text-align:center;color:var(--muted);font-size:11px">Нет записей</div>';
+    return;
+  }
+  list.innerHTML = state.commits.map(c =>
+    '<div class="ci" onclick="showCommit(\'' + c.Hash + '\')">' +
+      '<div class="cdot ' + c.Action + '"></div>' +
+      '<div class="ct">' +
+        '<div class="ca">' + esc(c.Action) + '</div>' +
+        '<div class="cd">' + esc(c.Details) + '</div>' +
+        '<div class="ch">' + c.Hash.slice(0,16) + '…</div>' +
+      '</div>' +
+    '</div>'
+  ).join('');
+}
+
+function showCommit(hash) {
+  const c = state.commits.find(x => x.Hash === hash);
+  if (!c) return;
+  document.getElementById('m-hash').textContent    = c.Hash;
+  document.getElementById('m-action').textContent  = c.Action;
+  document.getElementById('m-details').textContent = c.Details;
+  document.getElementById('m-pid').textContent     = c.PersonID;
+  document.getElementById('m-time').textContent    = new Date(c.Timestamp).toLocaleString('ru-RU');
+  document.getElementById('modal').classList.add('open');
+}
+
+let _tt;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  clearTimeout(_tt); _tt = setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+let _rt;
+window.addEventListener('resize', () => { clearTimeout(_rt); _rt = setTimeout(renderTree, 150); });
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') document.getElementById('modal').classList.remove('open');
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') submitPerson();
+});
+
+init();
+
+// ─── Export / Import JSON + PDF/JPEG ──────────────────────────
+async function exportJSON(){
+  try{
+    let payload={persons:state.persons,commits:state.commits,arweaveHash:state.arweaveHash};
+    if(serverMode){
+      const r=await fetch('/api/persons?_='+Date.now());
+      if(r.ok){ payload=await r.json(); }
+    }
+    const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;
+    a.download='sejire-tree.json';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    toast('Экспортирован JSON');
+  }catch(e){
+    toast('Ошибка экспорта');
+  }
+}
+
+/** Скачивание файла без window.open (Safari не блокирует). */
+function downloadBlob(blob, filename){
+  if(!blob || !blob.size) throw new Error('Пустой файл');
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.setAttribute('download', filename);
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 2500);
+}
+
+/** Векторный экспорт: один UTF-8 текст, без canvas — самый надёжный формат. */
+function buildExportSVGString(){
+  if(!state.persons.length) throw new Error('Дерево пустое');
+  const { positions, canvasW, canvasH, parentsOf } = buildLayout(state.persons);
+  const bg = '#E8F0EC';
+  const surface = '#FFFFFF';
+  const border = '#C5D9CE';
+  const male = '#2D7D5E';
+  const female = '#0F766E';
+  const root = '#5B8A72';
+  const navy = '#1B4D3E';
+  const muted = '#5A6B63';
+  const parts = [];
+  parts.push('<?xml version="1.0" encoding="UTF-8"?>');
+  parts.push('<svg xmlns="http://www.w3.org/2000/svg" width="'+canvasW+'" height="'+canvasH+'" viewBox="0 0 '+canvasW+' '+canvasH+'">');
+  parts.push('<rect width="100%" height="100%" fill="'+bg+'"/>');
+  state.persons.forEach(child => {
+    const parents = parentsOf[child.ID] || [];
+    if(!parents.length) return;
+    const cp = positions[child.ID];
+    if(!cp) return;
+    const childCx = cp.x + CW / 2;
+    const childTop = cp.y;
+    parents.forEach(par => {
+      const pp = positions[par.ID];
+      if(!pp) return;
+      const parentCx = pp.x + CW / 2;
+      const parentBottom = pp.y + CH;
+      const midY = (childTop + parentBottom) / 2;
+      const c1x = childCx;
+      const c1y = childTop - Math.abs(midY - childTop) * 0.3;
+      const c2x = parentCx;
+      const c2y = parentBottom + Math.abs(parentBottom - midY) * 0.3;
+      parts.push('<path d="M '+childCx+' '+childTop+' C '+c1x+' '+c1y+', '+c2x+' '+c2y+', '+parentCx+' '+parentBottom+'" stroke="#B0A9A0" stroke-width="1.6" fill="none" stroke-linecap="round"/>');
+    });
+  });
+  state.persons.forEach(p => {
+    const pos = positions[p.ID];
+    if(!pos) return;
+    const top = p.Role === 'Корень' ? root : (p.Sex === 'F' ? female : male);
+    const b = displayDate(p.BirthDate || '');
+    const d = displayDate(p.DeathDate || '');
+    const dates = (b || d) ? (b || '?') + (d ? ' - ' + d : '') : '';
+    parts.push('<g>');
+    parts.push('<rect x="'+pos.x+'" y="'+pos.y+'" width="'+CW+'" height="'+CH+'" rx="10" fill="'+surface+'" stroke="'+border+'" stroke-width="1.5"/>');
+    parts.push('<rect x="'+pos.x+'" y="'+pos.y+'" width="'+CW+'" height="5" rx="3" fill="'+top+'"/>');
+    parts.push('<text x="'+(pos.x+11)+'" y="'+(pos.y+18)+'" font-size="8" font-family="system-ui,sans-serif" font-weight="700" fill="'+top+'">'+esc((p.Role||'')+' '+(p.Sex==='M'?'♂':'♀'))+'</text>');
+    parts.push('<text x="'+(pos.x+11)+'" y="'+(pos.y+36)+'" font-size="13" font-family="system-ui,sans-serif" font-weight="700" fill="'+navy+'">'+esc(p.FullName || '')+'</text>');
+    if(dates) parts.push('<text x="'+(pos.x+11)+'" y="'+(pos.y+52)+'" font-size="10" font-family="system-ui,sans-serif" fill="'+muted+'">'+esc(dates)+'</text>');
+    if(p.BirthPlace) parts.push('<text x="'+(pos.x+11)+'" y="'+(pos.y+66)+'" font-size="9" font-family="system-ui,sans-serif" fill="'+muted+'">'+esc('Рожд.: '+p.BirthPlace)+'</text>');
+    if(p.DeathPlace) parts.push('<text x="'+(pos.x+11)+'" y="'+(pos.y+79)+'" font-size="9" font-family="system-ui,sans-serif" fill="'+muted+'">'+esc('Захор.: '+p.DeathPlace)+'</text>');
+    parts.push('</g>');
+  });
+  parts.push('</svg>');
+  return parts.join('');
+}
+
+function exportSVG(){
+  try{
+    const svg = buildExportSVGString();
+    const blob = new Blob([svg], { type:'image/svg+xml;charset=utf-8' });
+    downloadBlob(blob, 'sejire-tree.svg');
+    toast('Скачан файл sejire-tree.svg');
+  }catch(e){
+    console.error(e);
+    toast('Ошибка: ' + (e && e.message ? e.message : ''));
+  }
+}
+
+/** PDF: отдельное окно + системная печать Safari («Сохранить как PDF»). Без генерации PDF в JS. */
+function exportPDFPrint(){
+  if(!state.persons.length){ toast('Дерево пустое'); return; }
+  const w = window.open('', '_blank');
+  if(!w){
+    toast('Разрешите всплывающие окна — иначе печать недоступна');
+    return;
+  }
+  try{
+    const svg = buildExportSVGString();
+    const doc = w.document;
+    doc.open();
+    doc.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>Sejire — печать</title><style>@page{size:A4 landscape;margin:10mm}html,body{margin:0;background:#E8F0EC}body{display:flex;justify-content:center;align-items:flex-start}svg{max-width:100%;height:auto;display:block}</style></head><body>');
+    doc.write(svg);
+    doc.write('</body></html>');
+    doc.close();
+    setTimeout(function(){ try{ w.focus(); w.print(); }catch(e2){} }, 450);
+    toast('В диалоге печати выберите «Сохранить как PDF»');
+  }catch(e){
+    console.error(e);
+    try{ w.close(); }catch(_){}
+    toast('Ошибка печати');
+  }
+}
+
+/** Прямая отрисовка дерева на canvas — для PNG (JPEG в Safari часто ломается). */
+function fillRoundRectPath(ctx, x, y, w, h, r){
+  const rr = Math.min(r, w / 2, h / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + rr, y);
+  ctx.arcTo(x + w, y, x + w, y + h, rr);
+  ctx.arcTo(x + w, y + h, x, y + h, rr);
+  ctx.arcTo(x, y + h, x, y, rr);
+  ctx.arcTo(x, y, x + w, y, rr);
+  ctx.closePath();
+}
+
+function truncateExportText(ctx, text, maxW){
+  const s = String(text || '');
+  if(ctx.measureText(s).width <= maxW) return s;
+  let t = s;
+  while(t.length > 1 && ctx.measureText(t + '…').width > maxW) t = t.slice(0, -1);
+  return t + '…';
+}
+
+function scaleCanvasToMaxSide(src, maxSide){
+  const w = src.width, h = src.height;
+  const m = Math.max(w, h);
+  if(!maxSide || m <= maxSide) return src;
+  const s = maxSide / m;
+  const nw = Math.max(1, Math.round(w * s));
+  const nh = Math.max(1, Math.round(h * s));
+  const out = document.createElement('canvas');
+  out.width = nw;
+  out.height = nh;
+  const x = out.getContext('2d');
+  x.imageSmoothingEnabled = true;
+  x.imageSmoothingQuality = 'high';
+  x.drawImage(src, 0, 0, nw, nh);
+  return out;
+}
+
+function renderTreeExportCanvas(){
+  if(!state.persons.length) throw new Error('Дерево пустое');
+  const { positions, canvasW, canvasH, parentsOf } = buildLayout(state.persons);
+  const c = document.createElement('canvas');
+  c.width = canvasW;
+  c.height = canvasH;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#E8F0EC';
+  ctx.fillRect(0, 0, canvasW, canvasH);
+
+  ctx.strokeStyle = '#B0A9A0';
+  ctx.lineWidth = 1.6;
+  ctx.lineCap = 'round';
+  state.persons.forEach(child => {
+    const parents = parentsOf[child.ID] || [];
+    if(!parents.length) return;
+    const childPos = positions[child.ID];
+    if(!childPos) return;
+    const childCx = childPos.x + CW / 2;
+    const childTop = childPos.y;
+    parents.forEach(par => {
+      const pp = positions[par.ID];
+      if(!pp) return;
+      const parentCx = pp.x + CW / 2;
+      const parentBottom = pp.y + CH;
+      const midY = (childTop + parentBottom) / 2;
+      const c1x = childCx;
+      const c1y = childTop - Math.abs(midY - childTop) * 0.3;
+      const c2x = parentCx;
+      const c2y = parentBottom + Math.abs(parentBottom - midY) * 0.3;
+      ctx.beginPath();
+      ctx.moveTo(childCx, childTop);
+      ctx.bezierCurveTo(c1x, c1y, c2x, c2y, parentCx, parentBottom);
+      ctx.stroke();
+    });
+  });
+
+  const topRoot = '#5B8A72';
+  const topMale = '#2D7D5E';
+  const topFemale = '#0F766E';
+  const textNavy = '#1B4D3E';
+  const textMuted = '#5A6B63';
+  const border = '#C5D9CE';
+  const tw = CW - 22;
+
+  ctx.textBaseline = 'top';
+  state.persons.forEach(p => {
+    const pos = positions[p.ID];
+    if(!pos) return;
+    const topC = p.Role === 'Корень' ? topRoot : (p.Sex === 'F' ? topFemale : topMale);
+
+    fillRoundRectPath(ctx, pos.x, pos.y, CW, CH, 10);
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fill();
+    ctx.strokeStyle = border;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    fillRoundRectPath(ctx, pos.x, pos.y, CW, 5, 3);
+    ctx.fillStyle = topC;
+    ctx.fill();
+
+    const roleStr = (p.Role || '') + ' ' + (p.Sex === 'M' ? '♂' : '♀');
+    ctx.font = '700 8px system-ui, -apple-system, "Segoe UI", sans-serif';
+    ctx.fillStyle = topC;
+    ctx.fillText(truncateExportText(ctx, roleStr, tw), pos.x + 11, pos.y + 8);
+
+    ctx.font = '700 13px system-ui, -apple-system, "Segoe UI", sans-serif';
+    ctx.fillStyle = textNavy;
+    ctx.fillText(truncateExportText(ctx, p.FullName || '', tw), pos.x + 11, pos.y + 22);
+
+    const b = displayDate(p.BirthDate || '');
+    const d = displayDate(p.DeathDate || '');
+    const dates = (b || d) ? (b || '?') + (d ? ' – ' + d : '') : '';
+    let lineY = pos.y + 42;
+    if(dates){
+      ctx.font = '400 10px system-ui, -apple-system, sans-serif';
+      ctx.fillStyle = textMuted;
+      ctx.fillText(truncateExportText(ctx, dates, tw), pos.x + 11, lineY);
+      lineY += 14;
+    }
+    if(p.BirthPlace){
+      ctx.font = '400 9px system-ui, -apple-system, sans-serif';
+      ctx.fillStyle = textMuted;
+      ctx.fillText(truncateExportText(ctx, 'Рожд.: ' + p.BirthPlace, tw), pos.x + 11, lineY);
+      lineY += 12;
+    }
+    if(p.DeathPlace){
+      ctx.font = '400 9px system-ui, -apple-system, sans-serif';
+      ctx.fillStyle = textMuted;
+      ctx.fillText(truncateExportText(ctx, 'Захор.: ' + p.DeathPlace, tw), pos.x + 11, lineY);
+    }
+  });
+
+  return c;
+}
+
+async function canvasToPngBlob(canvas){
+  const b = await new Promise(resolve => {
+    try{ canvas.toBlob(resolve, 'image/png'); }catch(e){ resolve(null); }
+  });
+  if(b && b.size > 0) return b;
+  const u = canvas.toDataURL('image/png');
+  if(!u || u === 'data:,') throw new Error('Не удалось сформировать PNG');
+  const r = await fetch(u);
+  const blob = await r.blob();
+  if(!blob || !blob.size) throw new Error('Пустой PNG');
+  return blob;
+}
+
+async function exportPNG(){
+  try{
+    if(!state.persons.length) throw new Error('Дерево пустое');
+    toast('Готовлю PNG…');
+    const raw = renderTreeExportCanvas();
+    const canvas = scaleCanvasToMaxSide(raw, 2400);
+    if(!canvas || !canvas.width || !canvas.height) throw new Error('Пустой canvas');
+    const blob = await canvasToPngBlob(canvas);
+    downloadBlob(blob, 'sejire-tree.png');
+    toast('Скачан sejire-tree.png');
+  }catch(e){
+    console.error(e);
+    toast('Ошибка PNG: ' + (e && e.message ? e.message : ''));
+  }
+}
+function triggerImport(){
+  document.getElementById('importFile').click();
+}
+async function handleImportFile(ev){
+  const file=ev.target.files && ev.target.files[0];
+  ev.target.value='';
+  if(!file) return;
+  try{
+    const text=await file.text();
+    const data=JSON.parse(text);
+    const db={
+      persons: Array.isArray(data.persons)?data.persons:[],
+      commits: Array.isArray(data.commits)?data.commits:[],
+      arweaveHash: data.arweaveHash||''
+    };
+    if(serverMode){
+      const r=await fetch('/api/import?_='+Date.now(),{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify(db)
+      });
+      if(!r.ok) throw new Error('server import failed');
+    }
+    state={persons:db.persons,commits:db.commits,arweaveHash:db.arweaveHash};
+    await persist();
+    render();
+    toast('Импортирован JSON');
+  }catch(e){
+    console.error(e);
+    toast('Ошибка импорта');
+  }
+}
+</script>
+</body>
+</html>
