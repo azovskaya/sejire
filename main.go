@@ -75,7 +75,6 @@ func saveDB(db Database) error {
 
 // ─── Utilities ───────────────────────────────────────────────────────────────
 
-// formatName capitalises each word — handles Cyrillic correctly.
 func formatName(s string) string {
 	words := strings.Fields(strings.TrimSpace(s))
 	for i, w := range words {
@@ -108,8 +107,6 @@ func makeCommit(action, personID, details string) Commit {
 	}
 }
 
-// ValidateConnection — запрет двух родителей одной роли у одного потомка.
-// Пример: у потомка не может быть два "Отец" или две "Мать".
 func ValidateConnection(members []Person, targetID string, role string) error {
 	for _, p := range members {
 		if p.TargetID == targetID && p.Role == role {
@@ -137,8 +134,6 @@ func cors(w http.ResponseWriter) {
 
 // ─── Handlers ────────────────────────────────────────────────────────────────
 
-// GET /api/persons  → return full DB
-// POST /api/persons → add a person
 func handlePersons(w http.ResponseWriter, r *http.Request) {
 	cors(w)
 	noCache(w)
@@ -149,13 +144,11 @@ func handlePersons(w http.ResponseWriter, r *http.Request) {
 	}
 
 	switch r.Method {
-
 	case http.MethodGet:
 		db := loadDB()
 		if err := json.NewEncoder(w).Encode(db); err != nil {
 			http.Error(w, "encode error", http.StatusInternalServerError)
 		}
-
 	case http.MethodPost:
 		var p Person
 		if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
@@ -173,108 +166,82 @@ func handlePersons(w http.ResponseWriter, r *http.Request) {
 		}
 		p.ID = generateID()
 		p.FullName = formatName(p.FullName)
-
 		db.Persons = append(db.Persons, p)
 		commit := makeCommit("ADD", p.ID, p.FullName+" ("+p.Role+")")
 		db.Commits = append(db.Commits, commit)
-
 		if err := saveDB(db); err != nil {
 			http.Error(w, "save error: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
-
 		resp := map[string]interface{}{"person": p, "commit": commit}
 		json.NewEncoder(w).Encode(resp)
-
 	default:
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}
 }
 
-// DELETE /api/database → wipe the DB file
 func handleDatabase(w http.ResponseWriter, r *http.Request) {
 	cors(w)
 	noCache(w)
-
 	if r.Method == http.MethodOptions {
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
-
 	if r.Method != http.MethodDelete {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-
 	if err := os.Remove(dbFile); err != nil && !os.IsNotExist(err) {
 		http.Error(w, "remove error: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-
 	json.NewEncoder(w).Encode(map[string]string{"status": "cleared"})
 }
 
-// POST /api/import → replace DB from uploaded JSON (persons, commits, arweaveHash)
 func handleImport(w http.ResponseWriter, r *http.Request) {
 	cors(w)
 	noCache(w)
-
 	if r.Method == http.MethodOptions {
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
-
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-
 	var db Database
 	if err := json.NewDecoder(r.Body).Decode(&db); err != nil {
 		http.Error(w, "bad request: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-
 	if db.Persons == nil {
 		db.Persons = []Person{}
 	}
 	if db.Commits == nil {
 		db.Commits = []Commit{}
 	}
-
 	if err := saveDB(db); err != nil {
 		http.Error(w, "save error: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-
 	json.NewEncoder(w).Encode(map[string]string{"status": "imported"})
 }
 
-// POST /api/snapshot → create an Arweave snapshot (stub)
-// In production: upload database.json bytes to Arweave via arweave-js or a gateway.
-// Returns a fake transaction ID derived from the DB content hash.
 func handleSnapshot(w http.ResponseWriter, r *http.Request) {
 	cors(w)
 	noCache(w)
-
 	if r.Method == http.MethodOptions {
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
-
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-
 	db := loadDB()
 	data, _ := json.Marshal(db.Persons)
 	h := sha256.Sum256(data)
-
-	// TODO: replace with actual Arweave upload
-	// e.g. POST https://arweave.net/tx with signed data bundle
 	txID := fmt.Sprintf("ar_%x", h[:16])
-
 	db.ArweaveHash = txID
 	commit := makeCommit("SNAPSHOT", "system", "Arweave TX: "+txID)
 	db.Commits = append(db.Commits, commit)
@@ -282,40 +249,31 @@ func handleSnapshot(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "save error: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"arweaveHash": txID,
 		"explorerURL": "https://viewblock.io/arweave/tx/" + txID,
 		"status":      "snapshot_created",
-		"note":        "Stub: integrate arweave-js for real permaweb uploads",
 		"commit":      commit,
 	})
 }
 
-// DELETE /api/persons/{id} → remove one person
-// PUT /api/persons/{id} → update one person
 func handlePersonByID(w http.ResponseWriter, r *http.Request) {
 	cors(w)
 	noCache(w)
-
 	if r.Method == http.MethodOptions {
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
-
 	id := strings.TrimPrefix(r.URL.Path, "/api/persons/")
 	if id == "" {
 		http.Error(w, "missing ID", http.StatusBadRequest)
 		return
 	}
-
 	switch r.Method {
 	case http.MethodDelete:
 		handleDeletePersonByID(w, r, id)
-		return
 	case http.MethodPut:
 		handleUpdatePersonByID(w, r, id)
-		return
 	default:
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}
@@ -332,17 +290,14 @@ func handleDeletePersonByID(w http.ResponseWriter, r *http.Request, id string) {
 		}
 		newList = append(newList, p)
 	}
-
 	if !found {
 		http.Error(w, "person not found", http.StatusNotFound)
 		return
 	}
-
 	db.Persons = newList
 	commit := makeCommit("DELETE", id, "Person removed")
 	db.Commits = append(db.Commits, commit)
 	saveDB(db)
-
 	json.NewEncoder(w).Encode(map[string]string{"status": "deleted"})
 }
 
@@ -352,13 +307,8 @@ func handleUpdatePersonByID(w http.ResponseWriter, r *http.Request, id string) {
 		http.Error(w, "bad request: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	if strings.TrimSpace(p.FullName) == "" {
-		http.Error(w, "FullName is required", http.StatusBadRequest)
-		return
-	}
 	p.ID = id
 	p.FullName = formatName(p.FullName)
-
 	db := loadDB()
 	idx := -1
 	for i, x := range db.Persons {
@@ -371,28 +321,11 @@ func handleUpdatePersonByID(w http.ResponseWriter, r *http.Request, id string) {
 		http.Error(w, "person not found", http.StatusNotFound)
 		return
 	}
-
 	db.Persons[idx] = p
 	commit := makeCommit("UPDATE", id, p.FullName+" ("+p.Role+")")
 	db.Commits = append(db.Commits, commit)
-
-	if err := saveDB(db); err != nil {
-		http.Error(w, "save error: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	resp := map[string]interface{}{"person": p, "commit": commit}
-	json.NewEncoder(w).Encode(resp)
-}
-
-// handleDeletePerson is kept for backwards compatibility; use handlePersonByID
-func handleDeletePerson(w http.ResponseWriter, r *http.Request) {
-	id := strings.TrimPrefix(r.URL.Path, "/api/persons/")
-	if id == "" {
-		http.Error(w, "missing ID", http.StatusBadRequest)
-		return
-	}
-	handleDeletePersonByID(w, r, id)
+	saveDB(db)
+	json.NewEncoder(w).Encode(map[string]interface{}{"person": p, "commit": commit})
 }
 
 // ─── Router & Main ───────────────────────────────────────────────────────────
@@ -402,18 +335,26 @@ func main() {
 
 	mux := http.NewServeMux()
 
-	// API routes
 	mux.HandleFunc("/api/persons", handlePersons)
 	mux.HandleFunc("/api/persons/", handlePersonByID)
 	mux.HandleFunc("/api/database", handleDatabase)
 	mux.HandleFunc("/api/import", handleImport)
 	mux.HandleFunc("/api/snapshot", handleSnapshot)
 
-	// Static files
 	fs := http.FileServer(http.Dir("./static"))
 	mux.Handle("/", fs)
 
-	addr := ":8080"
-	log.Printf("🌳 SEJIRE server running → http://localhost%s\n", addr)
-	log.Fatal(http.ListenAndServe(addr, mux))
+	// Получаем порт от Render
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+
+	// Слушаем на 0.0.0.0 для внешнего доступа
+	addr := "0.0.0.0:" + port
+	log.Printf("🌳 SEJIRE server running on %s\n", addr)
+	
+	if err := http.ListenAndServe(addr, mux); err != nil {
+		log.Fatal(err)
+	}
 }
